@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Requesty list przychodzacych</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #requests {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .request {
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        background-color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Request Receiver</h1>
+    <p>Incoming requests will appear below:</p>
+    <div id="requests"></div>
+
+    <script>
+      const eventSource = new EventSource("/events");
+
+      eventSource.onmessage = (event) => {
+        const requestDiv = document.createElement("div");
+        requestDiv.className = "request";
+        requestDiv.textContent = event.data;
+        document.getElementById("requests").prepend(requestDiv);
+      };
+    </script>
+  </body>
+</html>
