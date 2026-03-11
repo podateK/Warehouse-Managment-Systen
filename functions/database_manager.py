@@ -27,7 +27,6 @@ class DatabaseManager:
             )
         ''')
         
-        # Migrations
         try:
             cursor.execute("ALTER TABLE warehouse_data ADD COLUMN doc_type TEXT DEFAULT 'PZ'")
         except sqlite3.OperationalError:
@@ -66,7 +65,6 @@ class DatabaseManager:
             )
         ''')
         
-        # Add default users if table is empty
         cursor.execute('SELECT COUNT(*) FROM users')
         if cursor.fetchone()[0] == 0:
             cursor.execute("INSERT INTO users (username, password, is_admin) VALUES ('admin', 'admin', 1)")
@@ -112,7 +110,6 @@ class DatabaseManager:
     def get_all_receipts(self):
         conn = self.get_connection()
         cursor = conn.cursor()
-        # Fetch receipts with concatenated item names
         cursor.execute('''
             SELECT 
                 d.id, d.doc_type, d.date, d.number, 
@@ -130,11 +127,6 @@ class DatabaseManager:
     def get_inventory(self):
         conn = self.get_connection()
         cursor = conn.cursor()
-        # Calculate stock based on PZ (+) and WZ (-)
-        # Grouping by name, unit, and price (assuming FIFO or specific batch selection isn't required yet, 
-        # but price might vary, so grouping by name and unit is safer for general stock, 
-        # however user might want to see prices. For now, let's group by name and unit and take max price or average?
-        # Let's group by name and unit.
         
         cursor.execute('''
             SELECT 
@@ -154,7 +146,6 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Get all items with this name and unit from PZ documents, ordered by date (FIFO)
         cursor.execute('''
             SELECT i.id, i.quantity 
             FROM warehouse_receipt_items i
@@ -172,16 +163,13 @@ class DatabaseManager:
                 break
                 
             if item_qty <= remaining_to_remove:
-                # Remove whole item row
                 cursor.execute('DELETE FROM warehouse_receipt_items WHERE id = ?', (item_id,))
                 remaining_to_remove -= item_qty
             else:
-                # Reduce quantity
                 new_qty = item_qty - remaining_to_remove
                 cursor.execute('UPDATE warehouse_receipt_items SET quantity = ? WHERE id = ?', (new_qty, item_id))
                 remaining_to_remove = 0
         
-        # Cleanup empty receipts
         cursor.execute('''
             DELETE FROM warehouse_data 
             WHERE id NOT IN (SELECT DISTINCT receipt_id FROM warehouse_receipt_items)
@@ -195,10 +183,8 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Delete items associated with the document
         cursor.execute('DELETE FROM warehouse_receipt_items WHERE receipt_id = ?', (doc_id,))
         
-        # Delete the document itself
         cursor.execute('DELETE FROM warehouse_data WHERE id = ?', (doc_id,))
         
         conn.commit()

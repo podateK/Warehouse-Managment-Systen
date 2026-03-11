@@ -65,7 +65,6 @@ class MapEditorPage(QWidget):
 
         layout = QVBoxLayout(self)
 
-        # toolbar
         toolbar = QHBoxLayout()
         self.add_button = QPushButton("Dodaj")
         self.add_button.setCheckable(True)
@@ -85,7 +84,6 @@ class MapEditorPage(QWidget):
         toolbar.addStretch()
         layout.addLayout(toolbar)
 
-        # main area: canvas + list
         main_h = QHBoxLayout()
 
         self.canvas = MapCanvas(self)

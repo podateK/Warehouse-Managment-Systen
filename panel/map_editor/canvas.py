@@ -15,40 +15,32 @@ class MapCanvas(QWidget):
         self.setStyleSheet("background-color: black;")
         self.points = []  # list of dicts: {x,y,type,name}
 
-        # connections: list of tuples (src_index, dst_index)
         self.connections = []
 
-        # layout / ladder settings
         self.level_height = 100  # pixels between horizontal levels
         self.top_margin = 60
         self.left_margin = 60
         self.col_spacing = 120
         self.direction_offset = 60  # horizontal offset when routing up/down
 
-        # callbacks (set by parent)
         self.on_create_requested = None
         self.on_edit_requested = None
 
     def add_point(self, point):
-        # determine level from provided y or explicit level
         if 'level' in point:
             level = int(point['level'])
         else:
-            # if y provided, snap to nearest level
             if 'y' in point:
                 level = round((point['y'] - self.top_margin) / self.level_height)
             else:
                 level = 0
-        # normalize
         point['level'] = int(level)
         self.points.append(point)
-        # re-layout all points on canvas so levels align
         self.layout_levels()
         self.update()
 
     def update_point(self, index, point):
         if 0 <= index < len(self.points):
-            # preserve level if not specified
             if 'level' not in point and 'y' in point:
                 point['level'] = round((point['y'] - self.top_margin) / self.level_height)
             self.points[index] = point
@@ -58,25 +50,20 @@ class MapCanvas(QWidget):
     def remove_point(self, index):
         if 0 <= index < len(self.points):
             del self.points[index]
-            # remove connections referencing this point and adjust indices
             new_conns = []
             for s, d in self.connections:
                 if s == index or d == index:
                     continue
-                # shift indices greater than removed
                 s2 = s - 1 if s > index else s
                 d2 = d - 1 if d > index else d
                 new_conns.append((s2, d2))
             self.connections = new_conns
-            # re-layout after removal
             self.layout_levels()
             self.update()
 
-    # connection helpers
     def add_connection(self, src, dst):
         if (src, dst) in self.connections:
             return False
-        # enforce max 2 outgoing
         out = sum(1 for s, _ in self.connections if s == src)
         if out >= 2:
             return False
@@ -113,12 +100,10 @@ class MapCanvas(QWidget):
                 self.on_edit_requested(idx, (x, y))
         else:
             if callable(self.on_create_requested):
-                # pass clicked coordinates; editor will request creation
                 self.on_create_requested((x, y))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # recompute layout to keep points centered
         self.layout_levels()
         self.update()
 
@@ -127,7 +112,6 @@ class MapCanvas(QWidget):
 
         Points on the same level are spaced horizontally and centered.
         """
-        # group indices by level preserving insertion order
         levels = {}
         for idx, p in enumerate(self.points):
             lvl = int(p.get('level', 0))
@@ -149,7 +133,6 @@ class MapCanvas(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         font = QFont('Arial', 10)
         painter.setFont(font)
-        # draw connections first (under points) - ladder-style routing
         pen_color = QColor(200, 200, 200)
         painter.setPen(pen_color)
         for s, d in self.connections:
@@ -164,31 +147,22 @@ class MapCanvas(QWidget):
             lvl_d = pd.get('level', 0)
 
             if lvl_s == lvl_d:
-                # same level: straight horizontal
                 painter.drawLine(x1, y1, x2, y2)
                 angle = math.atan2(y2 - y1, x2 - x1)
                 endx, endy = x2, y2
             else:
-                # different levels: route with horizontal offset then vertical then horizontal
                 if lvl_d > lvl_s:
-                    # destination is lower (visually down) -> route to the right first
                     side = self.direction_offset
                 else:
-                    # destination is higher -> route to the left first
                     side = -self.direction_offset
 
                 mid_x = x1 + side
-                # horizontal from src to mid_x
                 painter.drawLine(x1, y1, mid_x, y1)
-                # vertical from y1 to y2 at mid_x
                 painter.drawLine(mid_x, y1, mid_x, y2)
-                # horizontal from mid_x to dst
                 painter.drawLine(mid_x, y2, x2, y2)
-                # arrow at destination pointing horizontally depending on last segment
                 angle = math.atan2(0, x2 - mid_x if x2 - mid_x != 0 else 1)
                 endx, endy = x2, y2
 
-            # draw simple arrowhead at (endx, endy)
             try:
                 ah = 8
                 p1 = QPointF(endx - ah * math.cos(angle - math.pi / 6), endy - ah * math.sin(angle - math.pi / 6))

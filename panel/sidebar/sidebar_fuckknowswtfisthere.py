@@ -71,7 +71,6 @@ class HoverableSidebar(QDockWidget):
         self.buttons[1].clicked.connect(self.parent().show_settings_page)
         self.buttons[2].clicked.connect(self.show_about_page)  # About
         self.buttons[3].clicked.connect(self.parent().show_dokumenty_page)
-        # map editor
         try:
             self.buttons[4].clicked.connect(self.parent().show_map_editor_page)
         except Exception:
@@ -85,7 +84,6 @@ class HoverableSidebar(QDockWidget):
         child widgets. Swallows exceptions so initialization won't fail.
         """
         try:
-            # If a dedicated content widget exists, toggle it
             content_widget = getattr(self, 'content_widget', None)
             if content_widget is not None:
                 try:
@@ -94,7 +92,6 @@ class HoverableSidebar(QDockWidget):
                 except Exception:
                     pass
 
-            # If a content layout exists, toggle its widgets
             content_layout = getattr(self, 'content_layout', None)
             if content_layout is not None:
                 try:
@@ -109,7 +106,6 @@ class HoverableSidebar(QDockWidget):
                 except Exception:
                     pass
 
-            # Fallback: toggle known elements if present
             try:
                 self.logo.setVisible(expanded)
             except Exception:
@@ -122,14 +118,12 @@ class HoverableSidebar(QDockWidget):
                     except Exception:
                         continue
             except Exception:
-                # Last-resort: toggle any QWidget children
                 for child in self.findChildren(QWidget):
                     try:
                         child.setVisible(expanded)
                     except Exception:
                         continue
         except Exception:
-            # Never raise from this helper during init
             return
 
     def show_about_page(self):

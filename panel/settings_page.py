@@ -15,7 +15,6 @@ class SettingsPage(QWidget):
         back_button.clicked.connect(parent.show_main_page)
         layout.addWidget(back_button, 0, 1, 1, 1)
 
-        # User Creation Section
         user_group = QWidget()
         user_layout = QVBoxLayout(user_group)
         

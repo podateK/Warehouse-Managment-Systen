@@ -7,7 +7,6 @@ from panel.main_window import MainWindow
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.dirname(os.path.abspath(__file__))
@@ -17,11 +16,9 @@ def resource_path(relative_path):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
-    # Set App Icon
     icon_path = resource_path(os.path.join('icons', 'app_icon.jpg'))
     app.setWindowIcon(QIcon(icon_path))
 
-    # Apply Global Dark Theme
     app.setStyleSheet("""
         QWidget {
             background-color: #2b2b2b;

@@ -16,20 +16,16 @@ class AddDocumentDialog(QDialog):
         
         self.layout = QVBoxLayout(self)
         
-        # Header Section
         self.setup_header()
         
-        # Items Table
         self.setup_items_table()
         
-        # Footer Section (Summary and Buttons)
         self.setup_footer()
         
     def setup_header(self):
         header_widget = QWidget()
         header_layout = QVBoxLayout(header_widget)
         
-        # Top row: Number and Date
         row1 = QHBoxLayout()
         
         self.number_edit = QLineEdit()
@@ -49,7 +45,6 @@ class AddDocumentDialog(QDialog):
         
         header_layout.addLayout(row1)
         
-        # Contractor row
         row2 = QHBoxLayout()
         self.contractor_edit = QLineEdit()
         self.contractor_edit.setPlaceholderText("Wybierz dostawcę..." if self.doc_type == "PZ" else "Wybierz odbiorcę...")
@@ -59,7 +54,6 @@ class AddDocumentDialog(QDialog):
         
         header_layout.addLayout(row2)
 
-        # Receiver row (Separate row "pod dostawcą")
         row_receiver = QHBoxLayout()
         self.receiver_edit = QLineEdit()
         self.receiver_edit.setPlaceholderText("Wybierz odbiorcę...")
@@ -69,7 +63,6 @@ class AddDocumentDialog(QDialog):
         
         header_layout.addLayout(row_receiver)
         
-        # Original Number row
         row3 = QHBoxLayout()
         self.original_number_edit = QLineEdit()
         self.original_number_edit.setPlaceholderText("Numer oryginału (np. WZ/123)")
@@ -85,7 +78,6 @@ class AddDocumentDialog(QDialog):
         self.table = QTableWidget()
         
         if self.doc_type == "WZ":
-            # WZ Mode: Show all inventory, allow selection
             columns = ["Zaznacz", "Nazwa", "Ilość na stanie", "Jm", "Ilość do wydania"]
             self.table.setColumnCount(len(columns))
             self.table.setHorizontalHeaderLabels(columns)
@@ -95,7 +87,6 @@ class AddDocumentDialog(QDialog):
             self.table.setRowCount(len(inventory))
             
             for i, (name, unit, qty) in enumerate(inventory):
-                # Checkbox
                 chk_widget = QWidget()
                 chk_layout = QHBoxLayout(chk_widget)
                 chk_layout.addWidget(QCheckBox())
@@ -112,22 +103,18 @@ class AddDocumentDialog(QDialog):
                 self.table.setItem(i, 3, QTableWidgetItem(str(unit)))
                 self.table.item(i, 3).setFlags(Qt.ItemFlag.ItemIsEnabled) # Read-only unit
                 
-                # Issue Qty - default to 0 or empty
                 self.table.setItem(i, 4, QTableWidgetItem("0"))
                 
         else:
-            # PZ Mode: Standard editable table
             columns = ["Lp", "Nazwa", "Ilość dostarczenia", "Ilość przyjęcia", "Jm", "Cena netto", "Wartość netto"]
             self.table.setColumnCount(len(columns))
             self.table.setHorizontalHeaderLabels(columns)
             self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
             
-            # Add some empty rows for data entry
             self.table.setRowCount(10)
             for i in range(10):
                 self.table.setItem(i, 0, QTableWidgetItem(str(i + 1)))
                 
-                # Jm ComboBox (column 4 now)
                 combo = QComboBox()
                 combo.addItems(["szt.", "kg", "m", "l", "kpl.", "op."])
                 self.table.setCellWidget(i, 4, combo)
@@ -135,7 +122,6 @@ class AddDocumentDialog(QDialog):
         self.layout.addWidget(self.table)
 
     def open_stock_selection(self):
-        # Not used in WZ mode anymore as we show all stock
         pass
 
         
@@ -156,7 +142,6 @@ class AddDocumentDialog(QDialog):
         self.layout.addLayout(footer_layout)
 
     def get_data(self):
-        # Collect data from form
         data = {
             "doc_type": self.doc_type,
             "number": self.number_edit.text(),
@@ -167,12 +152,10 @@ class AddDocumentDialog(QDialog):
             "items": []
         }
         
-        # Collect items
         total_value = 0.0
         
         if self.doc_type == "WZ":
             for row in range(self.table.rowCount()):
-                # Check if checked
                 chk_widget = self.table.cellWidget(row, 0)
                 checkbox = chk_widget.layout().itemAt(0).widget()
                 
@@ -193,12 +176,10 @@ class AddDocumentDialog(QDialog):
                     except ValueError:
                         pass
         else:
-            # PZ Mode
             for row in range(self.table.rowCount()):
                 name_item = self.table.item(row, 1)
                 qty_delivered_item = self.table.item(row, 2)
                 qty_received_item = self.table.item(row, 3)
-                # unit is in cell widget at 4
                 unit_widget = self.table.cellWidget(row, 4)
                 price_item = self.table.item(row, 5)
                 

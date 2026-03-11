@@ -7,7 +7,7 @@ class ManualControlPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.request_sender = RequestSender("http://192.168.18.52/cmd")
+        self.request_sender = RequestSender("http://10.91.170.213/cmd")
 
         layout = QVBoxLayout(self)
 
@@ -20,40 +20,46 @@ class ManualControlPage(QWidget):
         self.forward_button = QPushButton("Przód")
         self.forward_button.setFixedSize(100, 50)
         self.forward_button.setStyleSheet("font-size: 16px;")
-        self.forward_button.clicked.connect(lambda: self.handle_action("MOVE_FORWARD"))
+        self.forward_button.pressed.connect(lambda: self.handle_action("FORWARD"))
+        self.forward_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.forward_button, 0, 1, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.left_button = QPushButton("Lewo")
         self.left_button.setFixedSize(100, 50)
         self.left_button.setStyleSheet("font-size: 16px;")
-        self.left_button.clicked.connect(lambda: self.handle_action("MOVE_LEFT"))
+        self.left_button.pressed.connect(lambda: self.handle_action("MOVE_LEFT"))
+        self.left_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.left_button, 1, 0, alignment=Qt.AlignmentFlag.AlignRight)
 
         self.right_button = QPushButton("Prawo")
         self.right_button.setFixedSize(100, 50)
         self.right_button.setStyleSheet("font-size: 16px;")
-        self.right_button.clicked.connect(lambda: self.handle_action("MOVE_RIGHT"))
+        self.right_button.pressed.connect(lambda: self.handle_action("MOVE_RIGHT"))
+        self.right_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.right_button, 1, 2, alignment=Qt.AlignmentFlag.AlignLeft)
 
         self.backward_button = QPushButton("Tył")
         self.backward_button.setFixedSize(100, 50)
         self.backward_button.setStyleSheet("font-size: 16px;")
-        self.backward_button.clicked.connect(lambda: self.handle_action("MOVE_BACKWARD"))
+        self.backward_button.pressed.connect(lambda: self.handle_action("BACK"))
+        self.backward_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.backward_button, 2, 1, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.weight_up_button = QPushButton("Podnieś")
         self.weight_up_button.setFixedSize(100, 50)
         self.weight_up_button.setStyleSheet("font-size: 16px;")
-        self.weight_up_button.clicked.connect(lambda: self.handle_action("ACTION_LIFT"))
+        self.weight_up_button.pressed.connect(lambda: self.handle_action("ACTION_LIFT"))
+        self.weight_up_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.weight_up_button, 0, 3, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.weight_down_button = QPushButton("Opuść")
         self.weight_down_button.setFixedSize(100, 50)
         self.weight_down_button.setStyleSheet("font-size: 16px;")
-        self.weight_down_button.clicked.connect(lambda: self.handle_action("ACTION_LOWER"))
+        self.weight_down_button.pressed.connect(lambda: self.handle_action("ACTION_LOWER"))
+        self.weight_down_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.weight_down_button, 2, 3, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.weight_down_button = QPushButton("DIODA")
+        self.weight_down_button = QPushButton("Stop")
         self.weight_down_button.setFixedSize(75, 75)
         self.weight_down_button.setStyleSheet("font-size: 16px;")
         self.weight_down_button.clicked.connect(lambda: self.handle_action("STOP"))

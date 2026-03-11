@@ -24,7 +24,6 @@ class PointDialog(QDialog):
 
         self.name_edit = QLineEdit()
 
-        # optional: selector of existing map keys (so directions can be resolved)
         self.map_key_selector = None
         try:
             from tools import route_logger
@@ -34,7 +33,6 @@ class PointDialog(QDialog):
                 self.map_key_selector.addItem('---')
                 for k in keys:
                     self.map_key_selector.addItem(k)
-                # when user picks a map key, populate name_edit for exact matching
                 def on_map_key_changed(idx):
                     if idx <= 0:
                         return
@@ -43,22 +41,18 @@ class PointDialog(QDialog):
 
                 self.map_key_selector.currentIndexChanged.connect(on_map_key_changed)
         except Exception:
-            # route_logger not available -> no selector
             self.map_key_selector = None
 
         if point is not None:
-            # prefill
             t = point.get('type', 'P')
             idx = [self.type_selector.itemData(i) for i in range(self.type_selector.count())].index(t)
             self.type_selector.setCurrentIndex(idx)
             self.name_edit.setText(point.get('name', ''))
 
-        # if we have a map_key_selector, insert it above name_edit
         if self.map_key_selector is not None:
             layout.addWidget(QLabel('Mapa (wybierz klucz):'))
             layout.addWidget(self.map_key_selector)
 
-        # outgoing connections list (for edit)
         self.outgoing = outgoing or []
         if self.outgoing:
             layout.addWidget(QLabel('Połączenia wychodzące:'))
@@ -97,7 +91,6 @@ class PointDialog(QDialog):
         self.accept()
 
     def on_remove_connection(self):
-        # remove selected outgoing connection
         if not getattr(self, 'outgoing_selector', None):
             return
         idx = self.outgoing_selector.currentData()
@@ -109,8 +102,6 @@ class PointDialog(QDialog):
     def get_result(self):
         if self.deleted:
             return True, None, True, None
-        # if user selected a canonical map key, include it separately so
-        # the editor can use it for route resolution (avoids None directions)
         map_key = None
         if self.map_key_selector is not None:
             idx = self.map_key_selector.currentIndex()
