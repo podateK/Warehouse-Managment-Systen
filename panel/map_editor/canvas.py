@@ -23,6 +23,7 @@ class MapCanvas(QWidget):
         self.col_spacing = 120
         self.direction_offset = 60  # horizontal offset when routing up/down
 
+        self.auto_layout = True  # whether to auto-arrange blocks by level
         self.on_create_requested = None
         self.on_edit_requested = None
 
@@ -35,8 +36,18 @@ class MapCanvas(QWidget):
             else:
                 level = 0
         point['level'] = int(level)
+        
+        # Snap X to nearest existing point's X if within snap distance
+        snap_distance = 30
+        if 'x' in point and len(self.points) > 0:
+            existing_xs = [p.get('x', 0) for p in self.points]
+            nearest_x = min(existing_xs, key=lambda x: abs(x - point['x']))
+            if abs(nearest_x - point['x']) <= snap_distance:
+                point['x'] = nearest_x
+        
         self.points.append(point)
-        self.layout_levels()
+        if self.auto_layout:
+            self.layout_levels()
         self.update()
 
     def update_point(self, index, point):
@@ -44,7 +55,8 @@ class MapCanvas(QWidget):
             if 'level' not in point and 'y' in point:
                 point['level'] = round((point['y'] - self.top_margin) / self.level_height)
             self.points[index] = point
-            self.layout_levels()
+            if self.auto_layout:
+                self.layout_levels()
             self.update()
 
     def remove_point(self, index):
@@ -57,7 +69,8 @@ class MapCanvas(QWidget):
                 s2 = s - 1 if s > index else s
                 d2 = d - 1 if d > index else d
                 new_conns.append((s2, d2))
-            self.connections = new_conns
+            if self.auto_layout:
+                self.connections = new_conns
             self.layout_levels()
             self.update()
 
@@ -104,29 +117,21 @@ class MapCanvas(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.layout_levels()
+        if self.auto_layout:
+            self.layout_levels()
         self.update()
 
     def layout_levels(self):
-        """Assign x,y coordinates to points grouped by integer level.
-
-        Points on the same level are spaced horizontally and centered.
+        """Assign Y coordinate based on level.
+        
+        Each point keeps its X position where user placed it.
+        Y is determined by the level (all points on same level have same Y).
         """
-        levels = {}
         for idx, p in enumerate(self.points):
             lvl = int(p.get('level', 0))
-            levels.setdefault(lvl, []).append(idx)
-
-        width = max(self.width(), 400)
-        for lvl, indices in levels.items():
-            n = len(indices)
-            total_width = (n - 1) * self.col_spacing
-            start_x = max(self.left_margin, (width - total_width) // 2)
             y = self.top_margin + lvl * self.level_height
-            for i, idx in enumerate(indices):
-                x = start_x + i * self.col_spacing
-                self.points[idx]['x'] = int(x)
-                self.points[idx]['y'] = int(y)
+            # Only update Y, preserve X position where user placed it
+            self.points[idx]['y'] = int(y)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -143,26 +148,12 @@ class MapCanvas(QWidget):
             x1, y1 = ps.get('x', 0), ps.get('y', 0)
             x2, y2 = pd.get('x', 0), pd.get('y', 0)
 
-            lvl_s = ps.get('level', 0)
-            lvl_d = pd.get('level', 0)
+            # Rysuj prostą linię między punktami
+            painter.drawLine(x1, y1, x2, y2)
+            angle = math.atan2(y2 - y1, x2 - x1)
+            endx, endy = x2, y2
 
-            if lvl_s == lvl_d:
-                painter.drawLine(x1, y1, x2, y2)
-                angle = math.atan2(y2 - y1, x2 - x1)
-                endx, endy = x2, y2
-            else:
-                if lvl_d > lvl_s:
-                    side = self.direction_offset
-                else:
-                    side = -self.direction_offset
-
-                mid_x = x1 + side
-                painter.drawLine(x1, y1, mid_x, y1)
-                painter.drawLine(mid_x, y1, mid_x, y2)
-                painter.drawLine(mid_x, y2, x2, y2)
-                angle = math.atan2(0, x2 - mid_x if x2 - mid_x != 0 else 1)
-                endx, endy = x2, y2
-
+            # Rysuj strzałkę na końcu
             try:
                 ah = 8
                 p1 = QPointF(endx - ah * math.cos(angle - math.pi / 6), endy - ah * math.sin(angle - math.pi / 6))

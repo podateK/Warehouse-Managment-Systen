@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from panel.sidebar.sidebar_fuckknowswtfisthere import HoverableSidebar
+from panel.sidebar.sidebar_style import HoverableSidebar
 
 def create_sidebar(main_window):
     sidebar = HoverableSidebar("Sidebar", main_window)

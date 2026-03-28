@@ -1,17 +1,23 @@
+"""
+WMS Login Page - Professional authentication dialog for Warehouse Management System
+Provides user login interface with credential validation
+"""
+
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QHBoxLayout
 from PyQt6.QtGui import QFont, QPixmap, QIcon
 from PyQt6.QtCore import Qt
 from functions.PopupMessage import PopUpMessage
 from functions.database_manager import DatabaseManager
 
-class LoginPage(QDialog):
+class WMSLoginPage(QDialog):
+    """Professional WMS authentication dialog with industrial design theme"""
     def __init__(self, main_window=None):
         super().__init__()
         self.main_window = main_window
         self.db_manager = DatabaseManager()
 
         self.setWindowTitle("WMS - Panel Logowania")
-        self.setFixedSize(420, 500)
+        self.setFixedSize(540, 600)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         
         # Stylesheet dla dialoga logowania
@@ -60,10 +66,11 @@ class LoginPage(QDialog):
         header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         title_label = QLabel("WMS")
-        title_font = QFont('Segoe UI', 28, QFont.Weight.Bold)
+        title_font = QFont('Segoe UI', 32, QFont.Weight.Bold)
         title_label.setFont(title_font)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("color: #0066cc; margin-bottom: 10px;")
+        title_label.setStyleSheet("color: #0066cc; margin-bottom: 5px; padding: 10px;")
+        title_label.setMinimumHeight(50)
         header_layout.addWidget(title_label)
         
         subtitle_label = QLabel("Warehouse Management System")
@@ -139,3 +146,6 @@ class LoginPage(QDialog):
         else:
             print("Nieprawidłowa nazwa użytkownika lub hasło")
             PopUpMessage.show_message("Błąd logowania", "Nieprawidłowa nazwa użytkownika lub hasło", self)
+
+# Dla kompatybilności z import LoginPage
+LoginPage = WMSLoginPage

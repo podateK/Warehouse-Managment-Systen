@@ -165,14 +165,19 @@ class AddDocumentDialog(QDialog):
                     try:
                         qty_to_issue = float(self.table.item(row, 4).text())
                         if qty_to_issue > 0:
+                            # Get last price for this item from PZ documents
+                            price_netto = self.db_manager.get_last_price_for_item(name)
+                            value_netto = qty_to_issue * price_netto
+                            
                             data["items"].append({
                                 "name": name,
                                 "quantity": qty_to_issue,
                                 "quantity_delivered": qty_to_issue, # For WZ same
                                 "unit": unit,
-                                "price_netto": 0.0,
-                                "value_netto": 0.0
+                                "price_netto": price_netto,
+                                "value_netto": value_netto
                             })
+                            total_value += value_netto
                     except ValueError:
                         pass
         else:
@@ -207,3 +212,53 @@ class AddDocumentDialog(QDialog):
                     
         data["total_value"] = total_value
         return data
+    
+    def accept(self):
+        """Save document to database when dialog is accepted"""
+        try:
+            data = self.get_data()
+            
+            # Validate required fields
+            if not data["number"] or not data["contractor"]:
+                QMessageBox.warning(self, "Błąd", "Wpisz numer dokumentu i dostawcę/klienta.")
+                return
+            
+            # Add document to database
+            doc_id = self.db_manager.add_receipt(
+                doc_type=data["doc_type"],
+                date=data["date"],
+                number=data["number"],
+                original_number=data["original_number"],
+                contractor=data["contractor"],
+                receiver=data["receiver"],
+                value=data["total_value"],
+                cost=data["total_value"] * 0.1,  # Estimate cost at 10% of value
+                related_document=None
+            )
+            
+            # Add items to database
+            for item in data["items"]:
+                self.db_manager.add_receipt_item(
+                    receipt_id=doc_id,
+                    name=item["name"],
+                    quantity=item["quantity"],
+                    quantity_delivered=item["quantity_delivered"],
+                    unit=item["unit"],
+                    price_netto=item["price_netto"],
+                    value_netto=item["value_netto"]
+                )
+            
+            # If WZ, remove items from inventory
+            if self.doc_type == "WZ":
+                for item in data["items"]:
+                    self.db_manager.remove_item_from_stock(
+                        name=item["name"],
+                        quantity=item["quantity_delivered"],
+                        unit=item["unit"]
+                    )
+            
+            QMessageBox.information(self, "✅ Sukces", f"Dokument {data['doc_type']} został pomyślnie dodany.")
+            super().accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "❌ Błąd", f"Nie udało się zapisać dokumentu: {str(e)}")

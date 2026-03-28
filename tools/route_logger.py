@@ -32,6 +32,32 @@ mapa = {
 }
 
 
+def get_flat_moves_from_mapa():
+    """Return a flattened list of moves from module-level `mapa`, filtering out '-' placeholders.
+
+    The order is by mapa.keys() iteration and, for each source, by the same keys order.
+    """
+    try:
+        names = list(mapa.keys())
+    except Exception:
+        return []
+    out = []
+    for src in names:
+        obj = mapa.get(src)
+        if not obj: 
+            continue
+        for dst in names:
+            if dst == 'name':
+                continue
+            try:
+                v = getattr(obj, dst, None)
+            except Exception:
+                v = None
+            if v and v != '-':
+                out.append(v)
+    return out
+
+
 def update_mapa_from_canvas(points, connections):
     """Build a simple `mapa` mapping from point names to objects.
 
@@ -387,82 +413,57 @@ def sequence_indices_from_canvas(points, connections, start_name=None):
 
 
 def send_route_commands(points, connections, request_sender=None, start_name=None, leg_delay=0.2):
-    """Send commands derived from route to Arduino via RequestSender in background.
+    """Send commands derived from route to Arduino using Warehouse + Way() structure.
 
-    Sends 'ruch:<dir>' for turns (left/right/back) and after 1s sends the count
-    of consecutive identical turns. For FORWARD legs it sends 'ruch:forward'.
+    Extracts sequence of points from canvas connections and sends commands using Way() function.
     """
     def _worker():
         try:
+            # Update mapa from canvas
             update_mapa_from_canvas(points, connections)
+            
+            # Get names mapping
             names = []
             for i, p in enumerate(points):
                 n = (p.get('name') or '').strip()
                 names.append(n if n else f'#${i}')
-
+            
+            # Create RequestSender if not provided
             RS = request_sender
             if RS is None:
                 try:
                     from functions.RequestSender import RequestSender
-                    RS = RequestSender("http://10.91.170.213/cmd")
+                    RS = RequestSender("http://localhost:3000/cmd")
                 except Exception:
                     RS = None
-
+            
+            # Get sequence of point indices (following first outgoing edges)
             idx_seq = sequence_indices_from_canvas(points, connections, start_name=start_name)
             if not idx_seq or len(idx_seq) < 2:
+                print("⚠️  Route has less than 2 points")
                 return
-
-            legs = []
-            for a, b in zip(idx_seq, idx_seq[1:]):
-                sname = names[a]
-                dname = names[b]
+            
+            # Convert indices to names
+            point_names = [names[i] for i in idx_seq]
+            
+            print(f"\n🚀 Sending route via Warehouse structure: {' → '.join(point_names)}\n")
+        
+            import time
+            Start = mapa.get(point_names[0])
+            for i in range(len(point_names) - 1):
+                current_point = point_names[i]
+                next_point = point_names[i + 1]
+                
                 try:
-                    dirv = getattr(mapa.get(sname, type('o', (), {})()), dname, None)
-                except Exception:
-                    dirv = None
-                legs.append(((a, b), (sname, dname), (dirv or '').upper()))
-
-            import time, threading
-            i = 0
-            while i < len(legs):
-                _, _, dirv = legs[i]
-                if dirv in ('LEFT', 'RIGHT', 'BACK'):
-                    cnt = 1
-                    j = i + 1
-                    while j < len(legs) and legs[j][2] == dirv:
-                        cnt += 1
-                        j += 1
-
-                    cmd = f'ruch:{dirv.lower()}'
-                    print('SENDING:', cmd)
-                    try:
-                        if RS:
-                            RS.send_request(cmd)
-                    except Exception as e:
-                        print('Send error:', e)
-
-                    def _send_count(c):
-                        try:
-                            if RS:
-                                RS.send_request(str(c))
-                        except Exception as e:
-                            print('Send error:', e)
-
-                    t = threading.Timer(1.0, _send_count, args=(cnt,))
-                    t.start()
-                    i = j
-                    time.sleep(leg_delay)
-                else:
-                    if dirv == 'FORWARD':
-                        cmd = 'ruch:forward'
-                        print('SENDING:', cmd)
-                        try:
-                            if RS:
-                                RS.send_request(cmd)
-                        except Exception as e:
-                            print('Send error:', e)
-                    i += 1
-                    time.sleep(leg_delay)
+                    Way(current_point, next_point, request_sender=RS, leg_delay=leg_delay)
+                    Start = mapa.get(next_point)
+                    time.sleep(0.5) 
+                except Exception as e:
+                    print(f"❌ Error processing {current_point} → {next_point}: {e}")
+                    continue
+            
+            print(f"\n✅ Route completed!\n")
+            
         except Exception as e:
             print('send_route_commands worker error:', e)
 
@@ -470,6 +471,241 @@ def send_route_commands(points, connections, request_sender=None, start_name=Non
     th = threading.Thread(target=_worker, daemon=True)
     th.start()
     return th
+
+
+def Way(current_point, next_point, line_num=None, request_sender=None, leg_delay=0.2):
+    try:
+        RS = request_sender
+        if RS is None:
+            try:
+                from functions.RequestSender import RequestSender
+                RS = RequestSender("http://localhost:3000/cmd")
+            except Exception:
+                RS = None
+        
+        # Get point names
+        src_name = current_point if isinstance(current_point, str) else getattr(current_point, 'name', str(current_point))
+        dst_name = next_point if isinstance(next_point, str) else getattr(next_point, 'name', str(next_point))
+        
+        # Get source object from mapa
+        src_obj = mapa.get(src_name)
+        if src_obj is None:
+            print(f"❌ Point '{src_name}' not found in mapa")
+            return None
+        
+        # Get direction attribute
+        direction = getattr(src_obj, dst_name, None)
+        if direction is None or direction == '-':
+            print(f"⚠️  No direction from {src_name} to {dst_name}")
+            return None
+        
+        # Parse direction to get main direction (LEFT/RIGHT/FORWARD)
+        dir_upper = direction.upper()
+        main_dir = None
+        if 'LEFT' in dir_upper:
+            main_dir = 'LEFT'
+        elif 'RIGHT' in dir_upper:
+            main_dir = 'RIGHT'
+        elif 'FORWARD' in dir_upper:
+            main_dir = 'FORWARD'
+        else:
+            main_dir = dir_upper
+        
+        # Build command with line number if provided
+        if line_num is not None:
+            # Format: "left 2" or "right 1"
+            cmd = f"{main_dir} {line_num}".lower()
+            print(f"📤 {src_name} → {dst_name}: direction = {main_dir} at line {line_num}")
+        else:
+            cmd = main_dir.lower()
+            print(f"📤 {src_name} → {dst_name}: direction = {main_dir}")
+        
+        import time
+        try:
+            if RS:
+                RS.send_request(cmd)
+            else:
+                print(f"   Sending: {cmd}")
+        except Exception as e:
+            print(f"   ❌ Error sending: {e}")
+        
+        time.sleep(leg_delay)
+        return direction
+        
+    except Exception as e:
+        print(f'Way() error: {e}')
+        return None
+
+
+def send_commands_from_list(points_list, request_sender=None, leg_delay=0.2):
+    """Send movement commands based on a list of point names using Way() function.
+    
+    Args:
+        points_list: List of point names, e.g., ['H1', 'M1', 'M2', 'M3', 'P1']
+        request_sender: RequestSender instance (if None, creates new one for localhost)
+        leg_delay: Delay between commands in seconds (default 0.2)
+    
+    Example:
+        send_commands_from_list(['H1', 'M1', 'M2', 'M3', 'P1'])
+    """
+    def _worker():
+        try:
+            RS = request_sender
+            if RS is None:
+                try:
+                    from functions.RequestSender import RequestSender
+                    RS = RequestSender("http://localhost:3000/cmd")
+                except Exception:
+                    print("Error: Could not create RequestSender")
+                    return
+
+            if not points_list or len(points_list) < 2:
+                print("Error: Need at least 2 points in the list")
+                return
+
+            print(f"\n🚀 Sending commands for route: {' → '.join(points_list)}\n")
+            
+            import time
+            
+            # Process each pair of consecutive points using Way()
+            Start = mapa.get(points_list[0])
+            for i in range(len(points_list) - 1):
+                current_point = points_list[i]
+                next_point = points_list[i + 1]
+                
+                # Use Way() to send command
+                try:
+                    Way(current_point, next_point, request_sender=RS, leg_delay=leg_delay)
+                    Start = mapa.get(next_point)
+                    time.sleep(0.5)  # Pause between point transitions
+                except Exception as e:
+                    print(f"❌ Error processing {current_point} → {next_point}: {e}")
+                    continue
+            
+            print(f"\n✅ Route completed!\n")
+        except Exception as e:
+            print(f'send_commands_from_list error: {e}')
+
+    import threading
+    th = threading.Thread(target=_worker, daemon=True)
+    th.start()
+    return th
+
+
+def send_commands_from_branches(branches, request_sender=None, leg_delay=0.2, start_name='H1'):
+    """Send movement commands based on canvas branches with line numbers.
+    
+    Each branch has: {line_num: int, direction: 'LEFT'|'RIGHT', name: str, point_type: str}
+    
+    Args:
+        branches: List of branch dicts with line_num, direction, name, point_type
+        request_sender: RequestSender instance
+        leg_delay: Delay between commands
+        start_name: Starting point name (usually 'H1')
+    
+    Example:
+        branches = [
+            {'line_num': 1, 'direction': 'LEFT', 'name': 'M1', 'point_type': 'M'},
+            {'line_num': 2, 'direction': 'RIGHT', 'name': 'M2', 'point_type': 'M'},
+        ]
+        send_commands_from_branches(branches)
+    """
+    def _worker():
+        try:
+            RS = request_sender
+            if RS is None:
+                try:
+                    from functions.RequestSender import RequestSender
+                    RS = RequestSender("http://localhost:3000/cmd")
+                except Exception:
+                    print("Error: Could not create RequestSender")
+                    return
+
+            if not branches or len(branches) == 0:
+                print("Error: No branches to process")
+                return
+
+            print(f"\n🚀 Sending commands from {len(branches)} branches:\n")
+            
+            import time
+            
+            # Send starting point first
+            current = start_name
+            print(f"  Start: {current}")
+            
+            # Send commands for each branch
+            for i, branch in enumerate(branches):
+                line_num = branch.get('line_num', 1)
+                direction = branch.get('direction', 'LEFT')
+                name = branch.get('name', '')
+                
+                try:
+                    # Send command with line number
+                    Way(current, name, line_num=line_num, request_sender=RS, leg_delay=leg_delay)
+                    current = name
+                    time.sleep(0.5)  # Pause between branches
+                except Exception as e:
+                    print(f"❌ Error processing branch {i}: {e}")
+                    continue
+            
+            print(f"\n✅ All branches completed!\n")
+        except Exception as e:
+            print(f'send_commands_from_branches error: {e}')
+
+    import threading
+    th = threading.Thread(target=_worker, daemon=True)
+    th.start()
+    return th
+
+
+def parse_direction(direction_str):
+    """Parse direction string and return list of commands.
+    
+    Handles both '-' and '_' as separators.
+    
+    Examples:
+        'RIGHT' → ['ruch:right']
+        'LEFT-LEFT' → ['ruch:left', 'ruch:left']
+        'LEFT_LEFT' → ['ruch:left', 'ruch:left']
+        '2RIGHT' → ['ruch:right', 'ruch:right']
+        'FORWARD' → ['ruch:forward']
+        'RIGHT-2LEFT' → ['ruch:right', 'ruch:left', 'ruch:left']
+    """
+    if not direction_str or direction_str == '-':
+        return []
+    
+    commands = []
+    # Handle both '-' and '_' as separators
+    normalized = direction_str.replace('_', '-')
+    parts = normalized.split('-')
+    
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        
+        # Check if starts with number
+        if part[0].isdigit():
+            # Extract number and direction (e.g., "2LEFT" → 2, LEFT)
+            i = 0
+            while i < len(part) and part[i].isdigit():
+                i += 1
+            count = int(part[:i])
+            direction = part[i:].lower() if i < len(part) else ''
+            
+            if direction in ['left', 'right', 'forward', 'back']:
+                for _ in range(count):
+                    commands.append(f'ruch:{direction}')
+            else:
+                commands.append(f'ruch:{direction}')
+        else:
+            direction = part.lower()
+            if direction in ['left', 'right', 'forward', 'back']:
+                commands.append(f'ruch:{direction}')
+            else:
+                commands.append(direction)
+    
+    return commands
 
 
 def get_mapa_summary():

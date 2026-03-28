@@ -53,6 +53,11 @@ class MapEditorPage(QWidget):
         toolbar.addWidget(self.mode_label)
 
         toolbar.addStretch()
+        
+        self.test_map_button = QPushButton("Testowa Mapka")
+        self.test_map_button.clicked.connect(self.on_load_test_map)
+        toolbar.addWidget(self.test_map_button)
+        
         self.send_button = QPushButton("Wyślij trasę")
         self.send_button.clicked.connect(self.on_send_route)
         toolbar.addWidget(self.send_button)
@@ -65,12 +70,10 @@ class MapEditorPage(QWidget):
         self.canvas.on_create_requested = self.on_canvas_create
         self.canvas.on_edit_requested = self.on_canvas_edit
         self.selected_source = None
-
-        try:
-            self.canvas.auto_layout = bool(self.auto_layout_checkbox.isChecked())
-            self.auto_layout_checkbox.stateChanged.connect(lambda s: setattr(self.canvas, 'auto_layout', s == Qt.Checked))
-        except Exception:
-            pass
+        
+        # Initialize auto_layout from checkbox state
+        self.canvas.auto_layout = bool(self.auto_layout_checkbox.isChecked())
+        self.auto_layout_checkbox.stateChanged.connect(lambda s: setattr(self.canvas, 'auto_layout', s == 2))
 
         main_h.addWidget(self.canvas, stretch=3)
 
@@ -126,7 +129,8 @@ class MapEditorPage(QWidget):
                 if not ok:
                     self.mode_label.setText('Limit połączeń (max 2) lub już istnieje')
                 else:
-                    self.mode_label.setText(f'Połączono {src} -> {dst}')
+                    self.selected_source = dst  # Ustaw punkt docelowy jako nowe źródło
+                    self.mode_label.setText(f'Połączono {src} -> {dst}. Nowe źródło: #{dst}')
                     try:
                         src_pt = self.canvas.points[src]
                         dst_pt = self.canvas.points[dst]
@@ -333,3 +337,32 @@ class MapEditorPage(QWidget):
             print("Komenda wysłana (wywołano send_route_commands).")
         except Exception as e:
             print("Błąd podczas wysyłania trasy:", e)
+
+    def on_load_test_map(self):
+        """Load a hardcoded test map with H1 -> M1 -> M2 -> M3 -> P1 -> H1 route."""
+        # Clear existing points
+        self.canvas.points = []
+        self.canvas.connections = []
+        self.point_list.clear()
+        
+        # Create test points
+        test_points = [
+            {'x': 100, 'y': 100, 'type': 'H1', 'name': 'H1', 'level': 0},
+            {'x': 220, 'y': 100, 'type': 'M', 'name': 'M1', 'level': 0},
+            {'x': 340, 'y': 100, 'type': 'M', 'name': 'M2', 'level': 0},
+            {'x': 460, 'y': 100, 'type': 'M', 'name': 'M3', 'level': 0},
+            {'x': 580, 'y': 100, 'type': 'P', 'name': 'P1', 'level': 0},
+        ]
+        
+        # Add points to canvas
+        for point in test_points:
+            self.canvas.points.append(point)
+            self.add_point_to_list(point)
+        
+        # Create connections: H1->M1->M2->M3->P1
+        connections = [(0, 1), (1, 2), (2, 3), (3, 4)]
+        self.canvas.connections = connections
+        
+        print("Testowa mapka załadowana: H1 -> M1 -> M2 -> M3 -> P1")
+        self.canvas.update()
+
