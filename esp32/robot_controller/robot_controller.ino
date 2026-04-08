@@ -5,6 +5,7 @@
 #define UART_TX 17
 #define UART_RX 18
 #define UART_BAUD 9600
+#define WIFI_TIMEOUT_MS 10000
 
 const char* WIFI_SSID = "WIFI_SSID";
 const char* WIFI_PASS = "WIFI_PASSWORD";
@@ -15,6 +16,14 @@ IPAddress SUBNET(255, 255, 255, 0);
 IPAddress DNS1(8, 8, 8, 8);
 
 WebServer server(80);
+
+bool isValidCommand(const String& cmd) {
+    if (cmd.length() == 0 || cmd.length() > 32) return false;
+    for (char c : cmd) {
+        if (!isAlphaNumeric(c) && c != '-' && c != '_') return false;
+    }
+    return true;
+}
 
 void sendToArduino(const String& cmd) {
     Serial1.println(cmd);
@@ -36,6 +45,12 @@ void handleCmd() {
     }
 
     String command = doc["command"].as<String>();
+
+    if (!isValidCommand(command)) {
+        server.send(400, "application/json", "{\"error\":\"Invalid command\"}");
+        return;
+    }
+
     sendToArduino(command);
     server.send(200, "application/json", "{\"status\":\"ok\"}");
 }
@@ -55,7 +70,12 @@ void setup() {
     WiFi.config(LOCAL_IP, GATEWAY, SUBNET, DNS1);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
 
+    unsigned long startMs = millis();
     while (WiFi.status() != WL_CONNECTED) {
+        if (millis() - startMs > WIFI_TIMEOUT_MS) {
+            Serial.println("WiFi connection timeout, restarting...");
+            ESP.restart();
+        }
         delay(500);
     }
 
