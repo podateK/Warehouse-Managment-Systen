@@ -1,15 +1,9 @@
-"""
-WMS Settings Page - System configuration and user management
-Handles user administration and system preferences
-"""
-
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QCheckBox, QMessageBox, QGroupBox, QFormLayout, QHBoxLayout
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
 from functions.database_manager import DatabaseManager
 
 class WMSSettingsPage(QWidget):
-    """Professional settings interface for WMS system configuration and user management"""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
@@ -28,7 +22,6 @@ class WMSSettingsPage(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(20)
 
-        # Nagłówek
         header_layout = QHBoxLayout()
         title = QLabel("⚙️ Ustawienia Systemu")
         title.setFont(QFont('Segoe UI', 16, QFont.Weight.Bold))
@@ -37,13 +30,11 @@ class WMSSettingsPage(QWidget):
         header_layout.addStretch()
         layout.addLayout(header_layout)
         
-        # Separator
         separator = QLabel()
         separator.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         separator.setFixedHeight(1)
         layout.addWidget(separator)
 
-        # Grupa: Zarządzanie użytkownikami
         user_group = QGroupBox("👤 Zarządzanie Użytkownikami")
         user_group.setStyleSheet("""
             QGroupBox {
@@ -64,7 +55,6 @@ class WMSSettingsPage(QWidget):
         user_layout = QFormLayout(user_group)
         user_layout.setSpacing(12)
         
-        # Nazwa użytkownika
         username_label = QLabel("Nazwa użytkownika:")
         username_label.setStyleSheet("color: #374151; font-weight: bold;")
         self.username_input = QLineEdit()
@@ -83,7 +73,6 @@ class WMSSettingsPage(QWidget):
         """)
         user_layout.addRow(username_label, self.username_input)
         
-        # Hasło
         password_label = QLabel("Hasło:")
         password_label.setStyleSheet("color: #374151; font-weight: bold;")
         self.password_input = QLineEdit()
@@ -103,7 +92,6 @@ class WMSSettingsPage(QWidget):
         """)
         user_layout.addRow(password_label, self.password_input)
         
-        # Administrator checkbox
         self.admin_cb = QCheckBox("📌 Uprawnienia Administratora")
         self.admin_cb.setStyleSheet("""
             QCheckBox {
@@ -120,7 +108,6 @@ class WMSSettingsPage(QWidget):
         """)
         user_layout.addRow(self.admin_cb)
         
-        # Przycisk dodaj
         add_btn = QPushButton("✅ Dodaj Użytkownika")
         add_btn.setStyleSheet("""
             QPushButton {
@@ -143,7 +130,6 @@ class WMSSettingsPage(QWidget):
 
         layout.addStretch()
         
-        # Sekcja - Inne ustawienia
         other_group = QGroupBox("🔧 Inne Ustawienia")
         other_group.setStyleSheet("""
             QGroupBox {
@@ -172,26 +158,7 @@ class WMSSettingsPage(QWidget):
         
         layout.addStretch()
         
-        # Przyciski na dole
         button_layout = QHBoxLayout()
-        
-        logout_btn = QPushButton("🚪 Wyloguj Się")
-        logout_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ef4444;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #dc2626;
-            }
-        """)
-        logout_btn.clicked.connect(self.logout)
-        button_layout.addWidget(logout_btn)
-        
         button_layout.addStretch()
         
         back_button = QPushButton("← Wróć do Dashboard")
@@ -230,28 +197,4 @@ class WMSSettingsPage(QWidget):
         else:
             QMessageBox.warning(self, "❌ Błąd", f"Użytkownik '{username}' już istnieje w bazie danych.")
 
-    def logout(self):
-        """Logout and show login dialog"""
-        # Create a custom confirmation dialog
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Potwierdzenie Wylogowania")
-        msg.setText("Czy na pewno chcesz się wylogować?")
-        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        msg.setDefaultButton(QMessageBox.StandardButton.No)
-        msg.setIcon(QMessageBox.Icon.Question)
-        
-        # Show dialog and get result
-        result = msg.exec()
-        
-        if result == QMessageBox.StandardButton.Yes:
-            # Hide sidebar and show login dialog
-            if self.parent_window and hasattr(self.parent_window, 'sidebar'):
-                self.parent_window.sidebar.setVisible(False)
-            
-            if self.parent_window and hasattr(self.parent_window, 'show_login_dialog'):
-                self.parent_window.show_login_dialog()
-            else:
-                QMessageBox.warning(self, "❌ Błąd", "Nie można załadować okna logowania.")
-
-# Dla kompatybilności
 SettingsPage = WMSSettingsPage

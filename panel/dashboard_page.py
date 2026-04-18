@@ -6,7 +6,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtCore import QSize
 
 class StatCard(QWidget):
-    """Karta ze statystyką dla dashboards"""
     def __init__(self, title, value, unit="", color="#0066cc"):
         super().__init__()
         
@@ -14,7 +13,6 @@ class StatCard(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(10)
         
-        # Styl karty
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: white;
@@ -23,14 +21,12 @@ class StatCard(QWidget):
             }}
         """)
         
-        # Tytuł
         title_label = QLabel(title)
         title_font = QFont('Segoe UI', 10)
         title_label.setFont(title_font)
         title_label.setStyleSheet("color: #6b7280; font-weight: bold;")
         layout.addWidget(title_label)
         
-        # Wartość
         value_layout = QHBoxLayout()
         value_label = QLabel(str(value))
         value_font = QFont('Segoe UI', 28, QFont.Weight.Bold)
@@ -38,7 +34,6 @@ class StatCard(QWidget):
         value_label.setStyleSheet(f"color: {color};")
         value_layout.addWidget(value_label)
         
-        # Jednostka
         if unit:
             unit_label = QLabel(unit)
             unit_font = QFont('Segoe UI', 10)
@@ -68,7 +63,6 @@ class DashboardPage(QWidget):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(20)
         
-        # Nagłówek
         header_layout = QHBoxLayout()
         title = QLabel("Dashboard WMS")
         title_font = QFont('Segoe UI', 20, QFont.Weight.Bold)
@@ -78,17 +72,14 @@ class DashboardPage(QWidget):
         header_layout.addStretch()
         main_layout.addLayout(header_layout)
         
-        # Linia separacyjna
         separator = QLabel()
         separator.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         separator.setFixedHeight(1)
         main_layout.addWidget(separator)
         
-        # Rząd kart z danymi
         stats_layout = QGridLayout()
         stats_layout.setSpacing(15)
         
-        # Karty ze statystykami
         self.active_orders = StatCard("Aktywne Zamówienia", 12, "", "#0066cc")
         self.stock_items = StatCard("Artykuły w Magazynie", 1247, "szt.", "#10b981")
         self.pending_shipments = StatCard("Oczekujące Wysyłki", 5, "", "#f59e0b")
@@ -101,14 +92,12 @@ class DashboardPage(QWidget):
         
         main_layout.addLayout(stats_layout)
         
-        # Sekcja akcji
         action_label = QLabel("Szybkie Akcje")
         action_font = QFont('Segoe UI', 12, QFont.Weight.Bold)
         action_label.setFont(action_font)
         action_label.setStyleSheet("color: #1a3a52; margin-top: 20px;")
         main_layout.addWidget(action_label)
         
-        # Linia separacyjna
         separator2 = QLabel()
         separator2.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         separator2.setFixedHeight(1)
@@ -116,7 +105,6 @@ class DashboardPage(QWidget):
         
         actions_layout = QHBoxLayout()
         
-        # Przyciski akcji
         btn_style = """
             QPushButton {
                 background-color: #0066cc;
@@ -154,7 +142,6 @@ class DashboardPage(QWidget):
         actions_layout.addStretch()
         main_layout.addLayout(actions_layout)
         
-        # Informacje systemowe
         main_layout.addSpacing(30)
         
         info_label = QLabel("Ostatnie Operacje")
@@ -163,7 +150,6 @@ class DashboardPage(QWidget):
         info_label.setStyleSheet("color: #1a3a52;")
         main_layout.addWidget(info_label)
         
-        # Tabela operacji
         operations_box = QWidget()
         operations_box.setStyleSheet("""
             QWidget {

@@ -17,8 +17,7 @@ class ManualControlPage(QWidget):
             }
         """)
 
-        self.request_sender = RequestSender("http://10.91.170.213/cmd")
-        # Zdefiniowane przez użytkownika mapy magazynów (Wearhous)
+        self.request_sender = RequestSender()  # Uses ConfigManager for URL
         self.warehouses = {
             "H1": ["-", "RIGHT", "LEFT", "2LEFT", "3LEFT", "FORWARD"],
             "P1": ["LEFT", "-", "RIGHT-LEFT", "RIGHT-2LEFT", "RIGHT-3LEFT", "RIGHT"],
@@ -28,7 +27,6 @@ class ManualControlPage(QWidget):
             "M3": ["RIGHT", "RIGHT_LEFT", "RIGHT-2RIGHT", "RIGHT-RIGHT", "-", "LEFT"],
         }
 
-        # Flattenowana lista ruchów do wysyłki — filtrujemy puste '-'
         self.moves = [
             move for seq in self.warehouses.values() for move in seq if move != "-"
         ]
@@ -37,30 +35,25 @@ class ManualControlPage(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(20)
 
-        # Nagłówek
         title = QLabel("🤖 Ręczne Sterowanie Robotem")
         title.setFont(QFont('Segoe UI', 16, QFont.Weight.Bold))
         title.setStyleSheet("color: #1a3a52;")
         layout.addWidget(title)
         
-        # Separator
         separator = QLabel()
         separator.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         separator.setFixedHeight(1)
         layout.addWidget(separator)
 
-        # Info box
         info_label = QLabel("Status: 🟢 Gotowy | Steruj robotem w poniżej za pomocą przycisków")
         info_label.setStyleSheet("color: #10b981; font-weight: bold; padding: 10px; background-color: white; border-radius: 4px;")
         layout.addWidget(info_label)
 
-        # Kontrolki grid
         control_box = QWidget()
         control_box.setStyleSheet("background-color: white; border-radius: 8px; padding: 20px;")
         grid_layout = QGridLayout(control_box)
         grid_layout.setSpacing(10)
 
-        # Ustal style dla przycisków
         move_button_style = """
             QPushButton {
                 background-color: #0066cc;
@@ -119,48 +112,41 @@ class ManualControlPage(QWidget):
             }
         """
 
-        # Przycisk PRZÓD
         self.forward_button = QPushButton("⬆️\nPrzód")
         self.forward_button.setStyleSheet(move_button_style)
         self.forward_button.pressed.connect(lambda: self.handle_action("FORWARD"))
         self.forward_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.forward_button, 0, 1)
 
-        # Przycisk LEWO
         self.left_button = QPushButton("⬅️\nLewo")
         self.left_button.setStyleSheet(move_button_style)
         self.left_button.pressed.connect(lambda: self.handle_action("MOVE_LEFT"))
         self.left_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.left_button, 1, 0)
 
-        # Przycisk STOP (wielki środku)
         self.stop_button = QPushButton("⏹️\nSTOP")
         self.stop_button.setStyleSheet(stop_button_style)
         self.stop_button.clicked.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.stop_button, 0, 1, 2, 1)
         
-        # Przycisk PRAWO
         self.right_button = QPushButton("➡️\nPrawo")
         self.right_button.setStyleSheet(move_button_style)
         self.right_button.pressed.connect(lambda: self.handle_action("MOVE_RIGHT"))
         self.right_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.right_button, 1, 2)
 
-        # Przycisk TYŁ
         self.backward_button = QPushButton("⬇️\nTył")
         self.backward_button.setStyleSheet(move_button_style)
         self.backward_button.pressed.connect(lambda: self.handle_action("BACK"))
         self.backward_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.backward_button, 2, 1)
 
-        # Przycisk PODNIEŚ
         self.weight_up_button = QPushButton("🔼 PODNIEŚ")
         self.weight_up_button.setStyleSheet(action_button_style)
         self.weight_up_button.pressed.connect(lambda: self.handle_action("ACTION_LIFT"))
         self.weight_up_button.released.connect(lambda: self.handle_action("STOP"))
         grid_layout.addWidget(self.weight_up_button, 0, 3)
 
-        # Przycisk OPUŚĆ
         self.weight_down_button = QPushButton("🔽 OPUŚĆ")
         self.weight_down_button.setStyleSheet(action_button_style)
         self.weight_down_button.pressed.connect(lambda: self.handle_action("ACTION_LOWER"))
@@ -193,7 +179,6 @@ class ManualControlPage(QWidget):
         print("Map changed. Moves from map:", map_moves)
         print("Using hardcoded moves (will be sent):", self.moves)
 
-        # Wyślij tylko zhardcodowaną listę — ignoruj map_moves przy wysyłaniu
         for action in self.moves:
             try:
                 print(f"Wysyłam (hardcoded): {action}")

@@ -165,7 +165,6 @@ class AddDocumentDialog(QDialog):
                     try:
                         qty_to_issue = float(self.table.item(row, 4).text())
                         if qty_to_issue > 0:
-                            # Get last price for this item from PZ documents
                             price_netto = self.db_manager.get_last_price_for_item(name)
                             value_netto = qty_to_issue * price_netto
                             
@@ -218,12 +217,10 @@ class AddDocumentDialog(QDialog):
         try:
             data = self.get_data()
             
-            # Validate required fields
             if not data["number"] or not data["contractor"]:
                 QMessageBox.warning(self, "Błąd", "Wpisz numer dokumentu i dostawcę/klienta.")
                 return
             
-            # Add document to database
             doc_id = self.db_manager.add_receipt(
                 doc_type=data["doc_type"],
                 date=data["date"],
@@ -236,7 +233,6 @@ class AddDocumentDialog(QDialog):
                 related_document=None
             )
             
-            # Add items to database
             for item in data["items"]:
                 self.db_manager.add_receipt_item(
                     receipt_id=doc_id,
@@ -248,7 +244,6 @@ class AddDocumentDialog(QDialog):
                     value_netto=item["value_netto"]
                 )
             
-            # If WZ, remove items from inventory
             if self.doc_type == "WZ":
                 for item in data["items"]:
                     self.db_manager.remove_item_from_stock(

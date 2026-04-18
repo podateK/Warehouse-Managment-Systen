@@ -419,16 +419,13 @@ def send_route_commands(points, connections, request_sender=None, start_name=Non
     """
     def _worker():
         try:
-            # Update mapa from canvas
             update_mapa_from_canvas(points, connections)
             
-            # Get names mapping
             names = []
             for i, p in enumerate(points):
                 n = (p.get('name') or '').strip()
                 names.append(n if n else f'#${i}')
             
-            # Create RequestSender if not provided
             RS = request_sender
             if RS is None:
                 try:
@@ -437,13 +434,11 @@ def send_route_commands(points, connections, request_sender=None, start_name=Non
                 except Exception:
                     RS = None
             
-            # Get sequence of point indices (following first outgoing edges)
             idx_seq = sequence_indices_from_canvas(points, connections, start_name=start_name)
             if not idx_seq or len(idx_seq) < 2:
                 print("⚠️  Route has less than 2 points")
                 return
             
-            # Convert indices to names
             point_names = [names[i] for i in idx_seq]
             
             print(f"\n🚀 Sending route via Warehouse structure: {' → '.join(point_names)}\n")
@@ -483,23 +478,19 @@ def Way(current_point, next_point, line_num=None, request_sender=None, leg_delay
             except Exception:
                 RS = None
         
-        # Get point names
         src_name = current_point if isinstance(current_point, str) else getattr(current_point, 'name', str(current_point))
         dst_name = next_point if isinstance(next_point, str) else getattr(next_point, 'name', str(next_point))
         
-        # Get source object from mapa
         src_obj = mapa.get(src_name)
         if src_obj is None:
             print(f"❌ Point '{src_name}' not found in mapa")
             return None
         
-        # Get direction attribute
         direction = getattr(src_obj, dst_name, None)
         if direction is None or direction == '-':
             print(f"⚠️  No direction from {src_name} to {dst_name}")
             return None
         
-        # Parse direction to get main direction (LEFT/RIGHT/FORWARD)
         dir_upper = direction.upper()
         main_dir = None
         if 'LEFT' in dir_upper:
@@ -511,9 +502,7 @@ def Way(current_point, next_point, line_num=None, request_sender=None, leg_delay
         else:
             main_dir = dir_upper
         
-        # Build command with line number if provided
         if line_num is not None:
-            # Format: "left 2" or "right 1"
             cmd = f"{main_dir} {line_num}".lower()
             print(f"📤 {src_name} → {dst_name}: direction = {main_dir} at line {line_num}")
         else:
@@ -567,13 +556,11 @@ def send_commands_from_list(points_list, request_sender=None, leg_delay=0.2):
             
             import time
             
-            # Process each pair of consecutive points using Way()
             Start = mapa.get(points_list[0])
             for i in range(len(points_list) - 1):
                 current_point = points_list[i]
                 next_point = points_list[i + 1]
                 
-                # Use Way() to send command
                 try:
                     Way(current_point, next_point, request_sender=RS, leg_delay=leg_delay)
                     Start = mapa.get(next_point)
@@ -629,18 +616,15 @@ def send_commands_from_branches(branches, request_sender=None, leg_delay=0.2, st
             
             import time
             
-            # Send starting point first
             current = start_name
             print(f"  Start: {current}")
             
-            # Send commands for each branch
             for i, branch in enumerate(branches):
                 line_num = branch.get('line_num', 1)
                 direction = branch.get('direction', 'LEFT')
                 name = branch.get('name', '')
                 
                 try:
-                    # Send command with line number
                     Way(current, name, line_num=line_num, request_sender=RS, leg_delay=leg_delay)
                     current = name
                     time.sleep(0.5)  # Pause between branches
@@ -675,7 +659,6 @@ def parse_direction(direction_str):
         return []
     
     commands = []
-    # Handle both '-' and '_' as separators
     normalized = direction_str.replace('_', '-')
     parts = normalized.split('-')
     
@@ -684,9 +667,7 @@ def parse_direction(direction_str):
         if not part:
             continue
         
-        # Check if starts with number
         if part[0].isdigit():
-            # Extract number and direction (e.g., "2LEFT" → 2, LEFT)
             i = 0
             while i < len(part) and part[i].isdigit():
                 i += 1

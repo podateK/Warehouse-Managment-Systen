@@ -19,12 +19,11 @@ class MapCanvasLinear(QWidget):
         self.setMinimumSize(700, 500)
         self.setStyleSheet("background-color: #f5f7fa;")
         
-        # Data model
         self.branches = []  # list of {line_num, direction, name, point_type}
-        self.line_height = 80  # pixels between horizontal lines
-        self.top_margin = 60
-        self.center_x = 350  # center line X position
-        self.branch_length = 120  # length of branch line from center
+        self.line_height = 64  # pixels between horizontal lines
+        self.top_margin = 44
+        self.center_x = 350  # center line X position (updated dynamically on paint)
+        self.branch_length = 95  # length of branch line from center (updated dynamically)
         
         self.on_create_requested = None  # callback for add branch
         self.on_edit_requested = None  # callback for edit branch
@@ -61,14 +60,12 @@ class MapCanvasLinear(QWidget):
             line_num = branch['line_num']
             direction = branch['direction']
             
-            # Center position of branch
             center_y = self.top_margin + line_num * self.line_height
             if direction == 'LEFT':
                 branch_x = self.center_x - self.branch_length
             else:  # RIGHT
                 branch_x = self.center_x + self.branch_length
             
-            # Draw circle at branch endpoint
             dx = branch_x - x
             dy = center_y - y
             dist = math.sqrt(dx*dx + dy*dy)
@@ -85,13 +82,10 @@ class MapCanvasLinear(QWidget):
         
         idx = self._get_branch_at(x, y)
         if idx is not None:
-            # Edit existing branch
             if callable(self.on_edit_requested):
                 self.on_edit_requested(idx)
         else:
-            # Try to add new branch on center line
             if abs(x - self.center_x) < 30:
-                # Snap to nearest line_num
                 line_num = round((y - self.top_margin) / self.line_height)
                 if line_num >= 1:
                     if callable(self.on_create_requested):
@@ -115,16 +109,16 @@ class MapCanvasLinear(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        self.center_x = self.width() // 2
+        self.branch_length = max(75, min(110, self.width() // 5))
         
-        # Draw background gradient (opcjonalnie)
         painter.fillRect(self.rect(), QColor(245, 247, 250))
         
-        # Draw center vertical line - główna trasa
         painter.setPen(QPen(QColor(0, 102, 204), 4))  # niebieski
         painter.drawLine(self.center_x, self.top_margin, 
                          self.center_x, self.height() - self.top_margin)
         
-        # Draw start/end markers
         painter.setBrush(QColor(52, 168, 83))  # zielony
         painter.setPen(QPen(QColor(255, 255, 255), 2))
         painter.drawEllipse(self.center_x - 12, self.top_margin - 12, 24, 24)
@@ -132,11 +126,9 @@ class MapCanvasLinear(QWidget):
         painter.setPen(QPen(QColor(255, 255, 255), 1))
         painter.drawText(self.center_x - 8, self.top_margin + 8, "START")
         
-        # Draw line numbers and branches
         painter.setFont(QFont('Segoe UI', 9))
         
         if not self.branches:
-            # Draw guide lines if no branches yet
             painter.setPen(QPen(QColor(229, 231, 235), 1))
             for i in range(1, 6):
                 y = self.top_margin + i * self.line_height
@@ -146,25 +138,21 @@ class MapCanvasLinear(QWidget):
                                Qt.AlignmentFlag.AlignCenter, f"Linia {i}")
                 painter.setPen(QPen(QColor(229, 231, 235), 1))
         
-        # Draw branches
         for i, branch in enumerate(self.branches):
             line_num = branch['line_num']
             direction = branch['direction']
             name = branch.get('name', '')
             point_type = branch.get('point_type', 'P')
             
-            # Y position of this line
             y = self.top_margin + line_num * self.line_height
             
-            # Determine X position based on direction
             if direction == 'LEFT':
                 branch_x = self.center_x - self.branch_length
-                text_x = branch_x - 140
+                text_x = branch_x - 120
             else:  # RIGHT
                 branch_x = self.center_x + self.branch_length
-                text_x = branch_x + 20
+                text_x = branch_x + 12
             
-            # Draw branch line
             is_hovered = (i == self.hovered_branch)
             line_width = 5 if is_hovered else 3
             
@@ -176,10 +164,8 @@ class MapCanvasLinear(QWidget):
             painter.setPen(QPen(line_color, line_width))
             painter.drawLine(self.center_x, y, branch_x, y)
             
-            # Draw point circle at branch end
             circle_radius = 14 if is_hovered else 12
             
-            # Kolory dla różnych typów punktów
             if point_type == 'M':
                 color = QColor(16, 185, 129)  # zielony (magazyn)
             elif point_type == 'H1':
@@ -192,7 +178,6 @@ class MapCanvasLinear(QWidget):
             painter.drawEllipse(branch_x - circle_radius, y - circle_radius, 
                               circle_radius * 2, circle_radius * 2)
             
-            # Draw point type text
             painter.setPen(QPen(QColor(255, 255, 255), 1))
             painter.setFont(QFont('Segoe UI', 9, QFont.Weight.Bold))
             type_text = {'M': 'M', 'H1': 'H', 'P': 'P'}.get(point_type, 'P')
@@ -200,7 +185,6 @@ class MapCanvasLinear(QWidget):
                            circle_radius * 2, circle_radius * 2, 
                            Qt.AlignmentFlag.AlignCenter, type_text)
             
-            # Draw branch info text - bardziej widoczne
             painter.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
             painter.setPen(QPen(QColor(44, 62, 80), 1))
             
@@ -209,7 +193,6 @@ class MapCanvasLinear(QWidget):
             if name:
                 info_text += f" : {name}"
             
-            # Draw info background
             painter.setPen(QPen(QColor(229, 231, 235), 1))
             painter.setBrush(QColor(255, 255, 255))
             text_rect = painter.fontMetrics().boundingRect(info_text)
@@ -217,7 +200,6 @@ class MapCanvasLinear(QWidget):
             bg_rect.moveTo(text_x, y - 20)
             painter.drawRoundedRect(bg_rect, 3, 3)
             
-            # Draw the text
             painter.setPen(QPen(QColor(44, 62, 80), 1))
             painter.drawText(text_x, y - 20, text_rect.width() + 12, text_rect.height() + 8, 
                            Qt.AlignmentFlag.AlignCenter, info_text)

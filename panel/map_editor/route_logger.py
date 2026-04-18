@@ -1,4 +1,4 @@
-from editor_page import resolve_key
+﻿from editor_page import resolve_key
 
 class Warehouse:
     def __init__(self, H1, P1, M1, M2, M3, W1):

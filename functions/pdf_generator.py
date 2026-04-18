@@ -9,14 +9,57 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
 import os
+import sys
+
+DEFAULT_FONT = 'Helvetica'
+DEFAULT_FONT_BOLD = 'Helvetica-Bold'
+
+try:
+    font_configs = [
+        ("DejaVuSans", 
+         "C:\\Windows\\Fonts\\DejaVuSans.ttf",
+         "C:\\Windows\\Fonts\\DejaVuSans-Bold.ttf"),
+        ("LiberationSans",
+         "C:\\Windows\\Fonts\\LiberationSans-Regular.ttf",
+         "C:\\Windows\\Fonts\\LiberationSans-Bold.ttf"),
+        ("Arial",
+         "C:\\Windows\\Fonts\\arial.ttf",
+         "C:\\Windows\\Fonts\\arialbd.ttf"),
+    ]
+    
+    font_found = False
+    for font_name, font_path, font_bold_path in font_configs:
+        if os.path.exists(font_path) and os.path.exists(font_bold_path):
+            try:
+                pdfmetrics.registerFont(TTFont(font_name, font_path))
+                pdfmetrics.registerFont(TTFont(f"{font_name}-Bold", font_bold_path))
+                DEFAULT_FONT = font_name
+                DEFAULT_FONT_BOLD = f"{font_name}-Bold"
+                print(f"Successfully registered font: {font_name}")
+                font_found = True
+                break
+            except Exception as e:
+                print(f"Failed to register {font_name}: {e}")
+                continue
+    
+    if not font_found:
+        print("No suitable Unicode font found, using Helvetica fallback")
+        DEFAULT_FONT = 'Helvetica'
+        DEFAULT_FONT_BOLD = 'Helvetica-Bold'
+        
+except Exception as e:
+    print(f"Warning: Font registration error: {e}")
+    DEFAULT_FONT = 'Helvetica'
+    DEFAULT_FONT_BOLD = 'Helvetica-Bold'
 
 
 class PDFInvoiceGenerator:
     """Generate WMS documents (PZ/WZ) as PDF files"""
     
-    # Document Type Names (Polish)
     DOC_TYPES = {
         'PZ': 'PRZYJĘCIE ZEWNĘTRZNE',
         'WZ': 'WYDANIE ZEWNĘTRZNE'
@@ -26,7 +69,6 @@ class PDFInvoiceGenerator:
         self.company_name = company_name
         self.output_dir = output_dir
         
-        # Create output directory if it doesn't exist
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
     
@@ -59,14 +101,12 @@ class PDFInvoiceGenerator:
         doc_number = data.get('number', 'DOC/001/2026')
         doc_date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
         
-        # Generate filename if not provided
         if filename is None:
             safe_number = doc_number.replace('/', '_').replace(' ', '')
             filename = f"{safe_number}_{doc_date}.pdf"
         
         filepath = os.path.join(self.output_dir, filename)
         
-        # Create PDF document
         doc = SimpleDocTemplate(
             filepath,
             pagesize=A4,
@@ -76,22 +116,16 @@ class PDFInvoiceGenerator:
             bottomMargin=1.5*cm
         )
         
-        # Build story (content)
         story = []
         
-        # Add header
         story.extend(self._build_header(doc_type, data))
         
-        # Add document info
         story.extend(self._build_document_info(data, doc_type))
         
-        # Add items table
         story.extend(self._build_items_table(data))
         
-        # Add totals and signature
         story.extend(self._build_footer(data))
         
-        # Build PDF
         doc.build(story)
         
         return filepath
@@ -101,7 +135,6 @@ class PDFInvoiceGenerator:
         styles = getSampleStyleSheet()
         story = []
         
-        # Company header
         company_title = ParagraphStyle(
             'CompanyTitle',
             parent=styles['Normal'],
@@ -109,13 +142,12 @@ class PDFInvoiceGenerator:
             textColor=colors.HexColor('#003d7a'),
             spaceAfter=6,
             alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+            fontName=DEFAULT_FONT_BOLD
         )
         
         story.append(Paragraph(self.company_name, company_title))
         story.append(Spacer(1, 0.3*cm))
         
-        # Document type
         doc_type_style = ParagraphStyle(
             'DocType',
             parent=styles['Normal'],
@@ -123,7 +155,7 @@ class PDFInvoiceGenerator:
             textColor=colors.HexColor('#003d7a'),
             spaceAfter=6,
             alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+            fontName=DEFAULT_FONT_BOLD
         )
         
         doc_type_name = self.DOC_TYPES.get(doc_type, 'DOKUMENT')
@@ -142,7 +174,7 @@ class PDFInvoiceGenerator:
             parent=styles['Normal'],
             fontSize=10,
             textColor=colors.HexColor('#333333'),
-            fontName='Helvetica-Bold',
+            fontName=DEFAULT_FONT_BOLD,
             alignment=TA_LEFT
         )
         
@@ -150,11 +182,11 @@ class PDFInvoiceGenerator:
             'FieldValue',
             parent=styles['Normal'],
             fontSize=10,
+            fontName=DEFAULT_FONT,
             textColor=colors.black,
             alignment=TA_LEFT
         )
         
-        # Create info table
         info_data = [
             [
                 Paragraph('Numer dokumentu:', label_style),
@@ -196,13 +228,12 @@ class PDFInvoiceGenerator:
         styles = getSampleStyleSheet()
         story = []
         
-        # Table header style
         header_style = ParagraphStyle(
             'TableHeader',
             parent=styles['Normal'],
             fontSize=9,
             textColor=colors.white,
-            fontName='Helvetica-Bold',
+            fontName=DEFAULT_FONT_BOLD,
             alignment=TA_CENTER
         )
         
@@ -210,6 +241,7 @@ class PDFInvoiceGenerator:
             'TableCell',
             parent=styles['Normal'],
             fontSize=9,
+            fontName=DEFAULT_FONT,
             alignment=TA_LEFT
         )
         
@@ -217,10 +249,10 @@ class PDFInvoiceGenerator:
             'TableNumber',
             parent=styles['Normal'],
             fontSize=9,
+            fontName=DEFAULT_FONT,
             alignment=TA_RIGHT
         )
         
-        # Prepare table data
         table_data = [
             [
                 Paragraph('Lp.', header_style),
@@ -233,7 +265,6 @@ class PDFInvoiceGenerator:
             ]
         ]
         
-        # Add items
         items = data.get('items', [])
         for idx, item in enumerate(items, 1):
             table_data.append([
@@ -246,7 +277,6 @@ class PDFInvoiceGenerator:
                 Paragraph(f"{item.get('value_netto', 0):.2f} PLN", number_style)
             ])
         
-        # Add summary row if no items
         if not items:
             table_data.append([
                 Paragraph('-', cell_style),
@@ -258,26 +288,21 @@ class PDFInvoiceGenerator:
                 Paragraph('0.00 PLN', number_style)
             ])
         
-        # Create table
         col_widths = [0.8*cm, 5*cm, 1.2*cm, 2*cm, 2*cm, 2*cm, 2*cm]
         items_table = Table(table_data, colWidths=col_widths)
         
         items_table.setStyle(TableStyle([
-            # Header
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#003d7a')),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
             
-            # All cells
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
             ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             
-            # Alternate row colors
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')]),
             
-            # Padding
             ('LEFTPADDING', (0, 0), (-1, -1), 0.3*cm),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0.3*cm),
             ('TOPPADDING', (0, 0), (-1, -1), 0.2*cm),
@@ -298,7 +323,7 @@ class PDFInvoiceGenerator:
             'TotalLabel',
             parent=styles['Normal'],
             fontSize=10,
-            fontName='Helvetica-Bold',
+            fontName=DEFAULT_FONT_BOLD,
             alignment=TA_RIGHT
         )
         
@@ -306,13 +331,24 @@ class PDFInvoiceGenerator:
             'TotalValue',
             parent=styles['Normal'],
             fontSize=11,
-            fontName='Helvetica-Bold',
+            fontName=DEFAULT_FONT_BOLD,
             textColor=colors.HexColor('#003d7a'),
             alignment=TA_RIGHT
         )
         
-        # Totals table
-        total_amount = data.get('total_value', 0)
+        items = data.get('items', [])
+        item_totals = []
+        for item in items:
+            value_netto = item.get('value_netto')
+            if value_netto is None:
+                quantity_delivered = item.get('quantity_delivered', item.get('quantity', 0))
+                price_netto = item.get('price_netto', 0)
+                value_netto = quantity_delivered * price_netto
+            item_totals.append(float(value_netto or 0))
+
+        total_amount = sum(item_totals)
+        if total_amount == 0:
+            total_amount = float(data.get('total_value', 0) or 0)
         
         totals_data = [
             ['', 'RAZEM WARTOŚĆ NETTO:', f'{total_amount:.2f} PLN'],
@@ -324,8 +360,8 @@ class PDFInvoiceGenerator:
         totals_table.setStyle(TableStyle([
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
             ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), DEFAULT_FONT_BOLD),
+            ('FONTNAME', (2, 0), (2, -1), DEFAULT_FONT_BOLD),
             ('FONTSIZE', (1, -1), (2, -1), 11),
             ('TEXTCOLOR', (2, -1), (2, -1), colors.HexColor('#003d7a')),
             ('LINEABOVE', (1, -1), (2, -1), 1.5, colors.HexColor('#003d7a')),
@@ -336,11 +372,11 @@ class PDFInvoiceGenerator:
         story.append(totals_table)
         story.append(Spacer(1, 0.8*cm))
         
-        # Signature section
         sig_style = ParagraphStyle(
             'SignatureLabel',
             parent=styles['Normal'],
             fontSize=9,
+            fontName=DEFAULT_FONT,
             alignment=TA_CENTER,
             textColor=colors.grey
         )
@@ -367,11 +403,11 @@ class PDFInvoiceGenerator:
         story.append(sig_table)
         story.append(Spacer(1, 0.5*cm))
         
-        # Footer text
         footer_text = ParagraphStyle(
             'FooterText',
             parent=styles['Normal'],
             fontSize=8,
+            fontName=DEFAULT_FONT,
             alignment=TA_CENTER,
             textColor=colors.grey,
             spaceAfter=0
@@ -398,7 +434,6 @@ def generate_pdf_from_database(db_manager, doc_id, output_dir="invoices"):
     conn = db_manager.get_connection()
     cursor = conn.cursor()
     
-    # Get document data
     cursor.execute('''
         SELECT id, doc_type, date, number, original_number, contractor, receiver, value, cost
         FROM warehouse_data
@@ -412,7 +447,6 @@ def generate_pdf_from_database(db_manager, doc_id, output_dir="invoices"):
     
     doc_id, doc_type, date, number, original_number, contractor, receiver, value, cost = doc_row
     
-    # Get items
     cursor.execute('''
         SELECT name, quantity, quantity_delivered, unit, price_netto, value_netto
         FROM warehouse_receipt_items
@@ -434,7 +468,6 @@ def generate_pdf_from_database(db_manager, doc_id, output_dir="invoices"):
     
     conn.close()
     
-    # Prepare data for generator
     data = {
         'doc_type': doc_type,
         'number': number,
@@ -446,6 +479,5 @@ def generate_pdf_from_database(db_manager, doc_id, output_dir="invoices"):
         'total_value': value
     }
     
-    # Generate PDF
     generator = PDFInvoiceGenerator(output_dir=output_dir)
     return generator.generate_invoice(data)

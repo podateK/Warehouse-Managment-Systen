@@ -22,7 +22,6 @@ class SettingsPage(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(20)
 
-        # Nagłówek
         header_layout = QHBoxLayout()
         title = QLabel("⚙️ Ustawienia Systemu")
         title.setFont(QFont('Segoe UI', 16, QFont.Weight.Bold))
@@ -31,13 +30,11 @@ class SettingsPage(QWidget):
         header_layout.addStretch()
         layout.addLayout(header_layout)
         
-        # Separator
         separator = QLabel()
         separator.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         separator.setFixedHeight(1)
         layout.addWidget(separator)
 
-        # Grupa: Zarządzanie użytkownikami
         user_group = QGroupBox("👤 Zarządzanie Użytkownikami")
         user_group.setStyleSheet("""
             QGroupBox {
@@ -58,7 +55,6 @@ class SettingsPage(QWidget):
         user_layout = QFormLayout(user_group)
         user_layout.setSpacing(12)
         
-        # Nazwa użytkownika
         username_label = QLabel("Nazwa użytkownika:")
         username_label.setStyleSheet("color: #374151; font-weight: bold;")
         self.username_input = QLineEdit()
@@ -77,7 +73,6 @@ class SettingsPage(QWidget):
         """)
         user_layout.addRow(username_label, self.username_input)
         
-        # Hasło
         password_label = QLabel("Hasło:")
         password_label.setStyleSheet("color: #374151; font-weight: bold;")
         self.password_input = QLineEdit()
@@ -97,7 +92,6 @@ class SettingsPage(QWidget):
         """)
         user_layout.addRow(password_label, self.password_input)
         
-        # Administrator checkbox
         self.admin_cb = QCheckBox("📌 Uprawnienia Administratora")
         self.admin_cb.setStyleSheet("""
             QCheckBox {
@@ -114,7 +108,6 @@ class SettingsPage(QWidget):
         """)
         user_layout.addRow(self.admin_cb)
         
-        # Przycisk dodaj
         add_btn = QPushButton("✅ Dodaj Użytkownika")
         add_btn.setStyleSheet("""
             QPushButton {
@@ -137,7 +130,6 @@ class SettingsPage(QWidget):
 
         layout.addStretch()
         
-        # Przycisk wstecz
         back_layout = QHBoxLayout()
         back_layout.addStretch()
         back_button = QPushButton("← Wróć do Dashboard")

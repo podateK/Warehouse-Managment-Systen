@@ -70,7 +70,6 @@ class DatabaseManager:
             cursor.execute("INSERT INTO users (username, password, is_admin) VALUES ('admin', 'admin', 1)")
             cursor.execute("INSERT INTO users (username, password, is_admin) VALUES ('user', 'user', 0)")
 
-        # Tabela operacji/logów
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS operations_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,7 +81,6 @@ class DatabaseManager:
             )
         ''')
 
-        # Tabela zamówień
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +93,6 @@ class DatabaseManager:
             )
         ''')
 
-        # Populate sample data if first time
         cursor.execute('SELECT COUNT(*) FROM operations_log')
         if cursor.fetchone()[0] == 0:
             self._populate_sample_operations(cursor)
@@ -176,7 +173,6 @@ class DatabaseManager:
 
     def _populate_sample_warehouse_data(self, cursor):
         """Populate with sample warehouse receipts and shipments"""
-        # Sample PZ (Receipt) documents with items
         pz_documents = [
             ("PZ/2026/001", "2026-03-28", "001/PZ/2026", "Global Steel Sp. z o.o.", "Magazyn A", 28500.00, 1500.00),
             ("PZ/2026/002", "2026-03-27", "002/PZ/2026", "IsoTerm Polska", "Magazyn B", 12300.00, 650.00),
@@ -185,7 +181,6 @@ class DatabaseManager:
             ("PZ/2026/005", "2026-03-24", "005/PZ/2026", "ElectroCode Sp. z o.o.", "Magazyn A", 22400.00, 1200.00),
         ]
         
-        # Sample WZ (Shipment) documents with items
         wz_documents = [
             ("WZ/2026/001", "2026-03-28", "001/WZ/2026", "Budtrans Sp. z o.o.", "Odbior magazyn", 5800.00, 300.00),
             ("WZ/2026/002", "2026-03-27", "002/WZ/2026", "Projekt Domów Sp. z o.o.", "Odbiór magazyn", 8200.00, 420.00),
@@ -194,7 +189,6 @@ class DatabaseManager:
             ("WZ/2026/005", "2026-03-24", "005/WZ/2026", "Elektro Sieć Sp. z o.o.", "Odbiór magazyn", 4900.00, 250.00),
         ]
         
-        # Items for each PZ document
         pz_items_data = [
             [(1, "Rury stalowe 100x100mm", 240, 240, "m", 85.00, 20400.00)],
             [(2, "Styropian 200mm", 500, 500, "m2", 18.00, 9000.00)],
@@ -203,7 +197,6 @@ class DatabaseManager:
             [(5, "Sterowniki PLC Siemens", 150, 150, "szt", 120.00, 18000.00), (5, "Elektronika kontrolna", 200, 200, "szt", 22.00, 4400.00)],
         ]
         
-        # Items for each WZ document
         wz_items_data = [
             [(1, "Rury stalowe 100x100mm", 120, 120, "m", 85.00, 10200.00)],
             [(2, "Styropian 200mm", 300, 300, "m2", 18.00, 5400.00)],
@@ -212,7 +205,6 @@ class DatabaseManager:
             [(5, "Sterowniki PLC Siemens", 80, 80, "szt", 120.00, 9600.00), (5, "Elektronika kontrolna", 120, 120, "szt", 22.00, 2640.00)],
         ]
         
-        # Insert PZ documents
         for i, (number, date, orig_num, contractor, receiver, value, cost) in enumerate(pz_documents):
             cursor.execute('''
                 INSERT INTO warehouse_data (doc_type, date, number, original_number, contractor, receiver, value, cost, related_document)
@@ -220,14 +212,12 @@ class DatabaseManager:
             ''', ('PZ', date, number, orig_num, contractor, receiver, value, cost, None))
             doc_id = cursor.lastrowid
             
-            # Insert items for this PZ
             for item_doc_id, name, qty, qty_delivered, unit, price, val in pz_items_data[i]:
                 cursor.execute('''
                     INSERT INTO warehouse_receipt_items (receipt_id, name, quantity, quantity_delivered, unit, price_netto, value_netto)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 ''', (doc_id, name, qty, qty_delivered, unit, price, val))
         
-        # Insert WZ documents
         for i, (number, date, orig_num, client, receiver, value, cost) in enumerate(wz_documents):
             cursor.execute('''
                 INSERT INTO warehouse_data (doc_type, date, number, original_number, contractor, receiver, value, cost, related_document)
@@ -235,7 +225,6 @@ class DatabaseManager:
             ''', ('WZ', date, number, orig_num, client, receiver, value, cost, None))
             doc_id = cursor.lastrowid
             
-            # Insert items for this WZ
             for item_doc_id, name, qty, qty_delivered, unit, price, val in wz_items_data[i]:
                 cursor.execute('''
                     INSERT INTO warehouse_receipt_items (receipt_id, name, quantity, quantity_delivered, unit, price_netto, value_netto)
@@ -258,7 +247,6 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Calculate value_netto if not provided or if price_netto is provided but value_netto is 0
         if (value_netto == 0 or value_netto is None) and price_netto > 0:
             value_netto = quantity_delivered * price_netto
         

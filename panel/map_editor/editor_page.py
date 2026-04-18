@@ -71,7 +71,6 @@ class MapEditorPage(QWidget):
         self.canvas.on_edit_requested = self.on_canvas_edit
         self.selected_source = None
         
-        # Initialize auto_layout from checkbox state
         self.canvas.auto_layout = bool(self.auto_layout_checkbox.isChecked())
         self.auto_layout_checkbox.stateChanged.connect(lambda s: setattr(self.canvas, 'auto_layout', s == 2))
 
@@ -340,12 +339,10 @@ class MapEditorPage(QWidget):
 
     def on_load_test_map(self):
         """Load a hardcoded test map with H1 -> M1 -> M2 -> M3 -> P1 -> H1 route."""
-        # Clear existing points
         self.canvas.points = []
         self.canvas.connections = []
         self.point_list.clear()
         
-        # Create test points
         test_points = [
             {'x': 100, 'y': 100, 'type': 'H1', 'name': 'H1', 'level': 0},
             {'x': 220, 'y': 100, 'type': 'M', 'name': 'M1', 'level': 0},
@@ -354,12 +351,10 @@ class MapEditorPage(QWidget):
             {'x': 580, 'y': 100, 'type': 'P', 'name': 'P1', 'level': 0},
         ]
         
-        # Add points to canvas
         for point in test_points:
             self.canvas.points.append(point)
             self.add_point_to_list(point)
         
-        # Create connections: H1->M1->M2->M3->P1
         connections = [(0, 1), (1, 2), (2, 3), (3, 4)]
         self.canvas.connections = connections
         

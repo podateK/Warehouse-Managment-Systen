@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QDockWidget, QWidget, QVBoxLayout, QPushButton, QLabel, QSpacerItem, QSizePolicy
 from PyQt6.QtCore import QPropertyAnimation, Qt
 from PyQt6.QtGui import QIcon, QFont, QColor
+from functions.RobotStatusManager import RobotStatusManager
 
 class HoverableSidebar(QDockWidget):
     def __init__(self, title, parent=None):
@@ -20,7 +21,6 @@ class HoverableSidebar(QDockWidget):
         self.layout.setSpacing(0)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # Nagłówek
         header_widget = QWidget()
         header_widget.setStyleSheet("""
             QWidget {
@@ -45,13 +45,15 @@ class HoverableSidebar(QDockWidget):
         
         self.layout.addWidget(header_widget)
 
-        # Przyciski nawigacji
         self.buttons = []
         self.button_configs = [
             ("📊 Dashboard", "show_main_page"),
             ("🤖 Sterowanie Robotem", "show_manual_control_page"),
             ("🗺️ Edytor Mapy", "show_map_editor_page"),
             ("📄 Dokumenty", "show_dokumenty_page"),
+            ("🏷️ Etykiety Wysyłki", "show_labels_page"),
+            ("📊 Raporty", "show_report_page"),
+            ("🔍 Wyszukiwanie", "open_search"),
             ("⚙️ Ustawienia", "show_settings_page"),
         ]
         
@@ -82,7 +84,6 @@ class HoverableSidebar(QDockWidget):
             self.layout.addWidget(button)
             self.buttons.append((button, method))
 
-        # Separator
         separator = QLabel()
         separator.setStyleSheet("background-color: #334155; min-height: 1px;")
         separator.setFixedHeight(1)
@@ -91,7 +92,6 @@ class HoverableSidebar(QDockWidget):
         self.layout.addWidget(separator)
         self.layout.addSpacing(10)
 
-        # Info box
         info_box = QWidget()
         info_box.setStyleSheet("""
             QWidget {
@@ -109,18 +109,37 @@ class HoverableSidebar(QDockWidget):
         status_label.setStyleSheet("color: #cbd5e1;")
         info_layout.addWidget(status_label)
         
-        status_value = QLabel("🟢 Online")
-        status_value.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
-        status_value.setStyleSheet("color: #10b981;")
-        info_layout.addWidget(status_value)
+        self.status_value = QLabel("🟢 Online")
+        self.status_value.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
+        self.status_value.setStyleSheet("color: #10b981;")
+        info_layout.addWidget(self.status_value)
+        
+        sep_line = QLabel()
+        sep_line.setStyleSheet("background-color: #334155; min-height: 1px;")
+        sep_line.setFixedHeight(1)
+        sep_line.setMargin(5)
+        info_layout.addWidget(sep_line)
+        
+        robot_label = QLabel("Status Robota")
+        robot_label.setFont(QFont('Segoe UI', 9, QFont.Weight.Bold))
+        robot_label.setStyleSheet("color: #cbd5e1;")
+        info_layout.addWidget(robot_label)
+        
+        self.robot_status_value = QLabel("🟢 Online")
+        self.robot_status_value.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
+        self.robot_status_value.setStyleSheet("color: #10b981;")
+        info_layout.addWidget(self.robot_status_value)
         
         self.layout.addWidget(info_box)
+        
+        self.robot_status_manager = RobotStatusManager()
+        self.robot_status_manager.status_changed.connect(self.on_robot_status_changed)
+        
+        self.on_robot_status_changed(self.robot_status_manager.get_status())
 
-        # Spacer
         spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.layout.addItem(spacer)
 
-        # Przycisk wylogowania
         logout_button = QPushButton("🚪 Wyloguj się")
         logout_button.setStyleSheet("""
             QPushButton {
@@ -145,7 +164,6 @@ class HoverableSidebar(QDockWidget):
         self.widget.setLayout(self.layout)
         self.setWidget(self.widget)
 
-        # Podłączanie przycisków do akcji
         for button, method in self.buttons:
             if hasattr(self.parent(), method):
                 button.clicked.connect(lambda checked=False, m=method: getattr(self.parent(), m)())
@@ -160,10 +178,17 @@ class HoverableSidebar(QDockWidget):
     def _logout(self):
         """Wylogowanie użytkownika"""
         if hasattr(self.parent(), 'show_login_dialog'):
-            # Hide sidebar first
             self.setVisible(False)
-            # Show login dialog
             self.parent().show_login_dialog()
+
+    def on_robot_status_changed(self, status):
+        """Update robot status label"""
+        if status == "Online":
+            self.robot_status_value.setText("🟢 Online")
+            self.robot_status_value.setStyleSheet("color: #10b981;")
+        else:
+            self.robot_status_value.setText("🔴 Offline")
+            self.robot_status_value.setStyleSheet("color: #ef4444;")
 
     def show_about_page(self):
         self.parent().show_manual_control_page()

@@ -1,8 +1,3 @@
-"""
-WMS Login Page - Professional authentication dialog for Warehouse Management System
-Provides user login interface with credential validation
-"""
-
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QHBoxLayout
 from PyQt6.QtGui import QFont, QPixmap, QIcon
 from PyQt6.QtCore import Qt
@@ -10,7 +5,6 @@ from functions.PopupMessage import PopUpMessage
 from functions.database_manager import DatabaseManager
 
 class WMSLoginPage(QDialog):
-    """Professional WMS authentication dialog with industrial design theme"""
     def __init__(self, main_window=None):
         super().__init__()
         self.main_window = main_window
@@ -20,7 +14,6 @@ class WMSLoginPage(QDialog):
         self.setFixedSize(540, 600)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         
-        # Stylesheet dla dialoga logowania
         self.setStyleSheet("""
             QDialog {
                 background-color: #f5f7fa;
@@ -61,7 +54,6 @@ class WMSLoginPage(QDialog):
         main_layout.setContentsMargins(40, 40, 40, 40)
         main_layout.setSpacing(20)
 
-        # Nagłówek z ikoną
         header_layout = QVBoxLayout()
         header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -82,12 +74,10 @@ class WMSLoginPage(QDialog):
         
         main_layout.addLayout(header_layout)
 
-        # Linia separacyjna
         separator = QLabel()
         separator.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         main_layout.addWidget(separator)
 
-        # Label dla nazwy użytkownika
         username_label = QLabel("Nazwa użytkownika")
         username_label.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
         username_label.setStyleSheet("color: #374151;")
@@ -97,20 +87,46 @@ class WMSLoginPage(QDialog):
         self.username_input.setPlaceholderText("Wpisz swoją nazwę użytkownika")
         main_layout.addWidget(self.username_input)
 
-        # Label dla hasła
         password_label = QLabel("Hasło")
         password_label.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
         password_label.setStyleSheet("color: #374151;")
         main_layout.addWidget(password_label)
         
+        password_layout = QHBoxLayout()
+        password_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.password_input = QLineEdit()
         self.password_input.setPlaceholderText("Wpisz swoje hasło")
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        main_layout.addWidget(self.password_input)
+        password_layout.addWidget(self.password_input)
+        
+        self.toggle_password_btn = QPushButton("👁️")
+        self.toggle_password_btn.setFixedSize(40, 40)
+        self.toggle_password_btn.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                color: #6b7280;
+                border: 2px solid #d1d5db;
+                border-radius: 4px;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #f3f4f6;
+                border: 2px solid #0066cc;
+            }
+            QPushButton:pressed {
+                background-color: #e5e7eb;
+            }
+        """)
+        self.toggle_password_btn.clicked.connect(self.toggle_password_visibility)
+        password_layout.addWidget(self.toggle_password_btn)
+        
+        main_layout.addLayout(password_layout)
 
         main_layout.addSpacing(10)
 
-        # Przycisk logowania
         login_button = QPushButton("Zaloguj się")
         login_button.setMinimumHeight(40)
         login_button.setFont(QFont('Segoe UI', 11, QFont.Weight.Bold))
@@ -119,11 +135,19 @@ class WMSLoginPage(QDialog):
 
         main_layout.addStretch()
 
-        # Stopka
         footer_label = QLabel("© 2026 Warehouse Management System")
         footer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer_label.setStyleSheet("color: #9ca3af; font-size: 9px;")
         main_layout.addWidget(footer_label)
+
+    def toggle_password_visibility(self):
+        """Toggle password visibility"""
+        if self.password_input.echoMode() == QLineEdit.EchoMode.Password:
+            self.password_input.setEchoMode(QLineEdit.EchoMode.Normal)
+            self.toggle_password_btn.setText("🙈")
+        else:
+            self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+            self.toggle_password_btn.setText("👁️")
 
     def handle_login(self):
         username = self.username_input.text()
@@ -147,5 +171,4 @@ class WMSLoginPage(QDialog):
             print("Nieprawidłowa nazwa użytkownika lub hasło")
             PopUpMessage.show_message("Błąd logowania", "Nieprawidłowa nazwa użytkownika lub hasło", self)
 
-# Dla kompatybilności z import LoginPage
 LoginPage = WMSLoginPage

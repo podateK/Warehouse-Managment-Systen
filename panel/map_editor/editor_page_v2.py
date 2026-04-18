@@ -1,18 +1,17 @@
-"""Map Editor Page V2 - integrated visual editor with route selector."""
-
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox,
-    QDialog, QSpinBox, QComboBox, QFormLayout, QLineEdit, QGroupBox
+    QDialog, QSpinBox, QComboBox, QFormLayout, QLineEdit, QGroupBox, QSizePolicy
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
 from .canvas_new import MapCanvasLinear
 from .route_selector import RouteOrderPanelRight
+from functions.FloatingMessage import FloatingMessage
+from functions.RobotStatusManager import RobotStatusManager
 
 
 class BranchEditorDialog(QDialog):
-    """Dialog to edit a branch (line number, direction, point name, type)."""
     
     def __init__(self, parent=None, branch=None, line_num=None):
         super().__init__(parent)
@@ -44,14 +43,12 @@ class BranchEditorDialog(QDialog):
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
         
-        # Tytuł
         title = QLabel("Edytuj parametry gałęzi")
         title.setFont(QFont('Segoe UI', 12, QFont.Weight.Bold))
         title.setStyleSheet("color: #1a3a52;")
         layout.insertRow(0, title)
         layout.insertRow(1, QLabel())  # Spacer
         
-        # Line number
         line_label = QLabel("📏 Numer linii:")
         line_label.setStyleSheet("color: #374151;")
         self.line_spin = QSpinBox()
@@ -60,7 +57,6 @@ class BranchEditorDialog(QDialog):
         self.line_spin.setValue(line_num if line_num else self.branch.get('line_num', 1))
         layout.addRow(line_label, self.line_spin)
         
-        # Direction
         dir_label = QLabel("🧭 Kierunek:")
         dir_label.setStyleSheet("color: #374151;")
         self.dir_combo = QComboBox()
@@ -70,7 +66,6 @@ class BranchEditorDialog(QDialog):
         self.dir_combo.setCurrentIndex(idx)
         layout.addRow(dir_label, self.dir_combo)
         
-        # Point name
         name_label = QLabel("🏷️ Nazwa punktu:")
         name_label.setStyleSheet("color: #374151;")
         self.name_edit = QLineEdit()
@@ -78,7 +73,6 @@ class BranchEditorDialog(QDialog):
         self.name_edit.setText(self.branch.get('name', ''))
         layout.addRow(name_label, self.name_edit)
         
-        # Point type
         type_label = QLabel("📦 Typ punktu:")
         type_label.setStyleSheet("color: #374151;")
         self.type_combo = QComboBox()
@@ -94,7 +88,6 @@ class BranchEditorDialog(QDialog):
         
         layout.insertRow(layout.rowCount(), QLabel())  # Spacer
 
-        # Buttons
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("✅ Zapisz")
         ok_btn.setStyleSheet("""
@@ -167,54 +160,53 @@ class MapEditorPageV2(QWidget):
             }
         """)
         
-        # Main layout
         main_layout = QHBoxLayout(self)
         main_layout.setSpacing(15)
         main_layout.setContentsMargins(15, 15, 15, 15)
         
-        # Left side: Canvas with visual editor
         left_layout = QVBoxLayout()
         left_layout.setSpacing(10)
         
-        # Nagłówek
         header_label = QLabel("🗺️ Edytor Mapy Robota")
         header_font = QFont('Segoe UI', 14, QFont.Weight.Bold)
         header_label.setFont(header_font)
         header_label.setStyleSheet("color: #1a3a52;")
         left_layout.addWidget(header_label)
         
-        # Instructions
         instructions = QLabel(
             "💡 INSTRUKCJA OBSŁUGI:\n"
             "1. Kliknij na centrum (niebieska linia) aby dodać nową gałąź\n"
             "2. Wybierz kierunek (lewo/prawo) i typ punktu\n"
-            "3. Kliknij na punkt aby edytować\n"
-            "4. Prawy przycisk myszy na punkt = usuń\n"
-            "5. Najechaj kursorem aby podświetlić routes"
+            "3. Kliknij na punkt aby wysłać 1 request AUTO do ESP32\n"
+            "4. Ctrl+klik na punkt aby edytować\n"
+            "5. Prawy przycisk myszy na punkt = usuń\n"
+            "6. Najechaj kursorem aby podświetlić routes"
         )
         instructions.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        instructions.setWordWrap(True)
+        instructions.setMaximumWidth(560)
+        instructions.setMaximumHeight(110)
+        instructions.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         instructions.setStyleSheet("""
             QLabel {
                 background-color: #fef3c7;
                 color: #78350f;
-                padding: 12px;
+                padding: 8px;
                 border-radius: 6px;
                 border-left: 4px solid #f59e0b;
                 font-family: 'Segoe UI';
-                font-size: 10px;
+                font-size: 9px;
                 line-height: 1.4;
             }
         """)
         left_layout.addWidget(instructions)
         
-        # Canvas
         self.canvas = MapCanvasLinear(self)
         self.canvas.on_create_requested = self.on_canvas_create_branch
         self.canvas.on_edit_requested = self.on_canvas_edit_branch
         
         left_layout.addWidget(self.canvas)
         
-        # Buttons at bottom
         btn_layout = QHBoxLayout()
         
         self.clear_btn = QPushButton("🗑️ Wyczyść mapę")
@@ -236,22 +228,50 @@ class MapEditorPageV2(QWidget):
         """)
         self.clear_btn.clicked.connect(self.on_clear_map)
         btn_layout.addWidget(self.clear_btn)
+
+        self.refresh_status_btn = QPushButton("🔄 Odśwież status robota")
+        self.refresh_status_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                padding: 8px 14px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1d4ed8;
+            }
+            QPushButton:pressed {
+                background-color: #1e40af;
+            }
+        """)
+        self.refresh_status_btn.clicked.connect(self.on_refresh_robot_status)
+        btn_layout.addWidget(self.refresh_status_btn)
+
+        self.robot_status_label = QLabel("Status robota: ---")
+        self.robot_status_label.setStyleSheet("color: #374151; font-weight: bold;")
+        btn_layout.addWidget(self.robot_status_label)
         
         btn_layout.addStretch()
         left_layout.addLayout(btn_layout)
         
         main_layout.addLayout(left_layout, stretch=3)
         
-        # Right side: Route selector
         self.route_panel = RouteOrderPanelRight(self)
         main_layout.addWidget(self.route_panel, stretch=1)
         
         self.setLayout(main_layout)
         
-        # Connect canvas mouse events
         self.canvas.mousePressEvent_original = self.canvas.mousePressEvent
         self.canvas.mousePressEvent = self.canvas_mouse_press
         self.right_click_branch = None
+
+        self.robot_status_manager = RobotStatusManager()
+        self.robot_status_manager.status_changed.connect(self.on_robot_status_changed)
+        self.on_robot_status_changed(self.robot_status_manager.get_status())
+
+        self.on_refresh_robot_status()
     
     def canvas_mouse_press(self, event):
         """Handle mouse clicks on canvas."""
@@ -259,7 +279,6 @@ class MapEditorPageV2(QWidget):
         x = int(pos.x())
         y = int(pos.y())
         
-        # Right click = delete branch
         if event.button() == Qt.MouseButton.RightButton:
             idx = self.canvas._get_branch_at(x, y)
             if idx is not None:
@@ -268,22 +287,20 @@ class MapEditorPageV2(QWidget):
                 self.route_panel.refresh_route_list()
             return
         
-        # Left click = edit or create
         idx = self.canvas._get_branch_at(x, y)
         if idx is not None:
-            # Edit existing branch
-            self.on_canvas_edit_branch(idx)
+            if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                self.on_canvas_edit_branch(idx)
+            else:
+                self.route_panel.send_auto_for_branch(idx)
         else:
-            # Try to create new branch on center line
             if abs(x - self.canvas.center_x) < 40:
-                # Snap to nearest line_num
                 line_num = round((y - self.canvas.top_margin) / self.canvas.line_height)
                 if line_num >= 1:
                     self.on_canvas_create_branch(line_num)
     
     def on_canvas_create_branch(self, line_num):
         """Create new branch at specified line."""
-        # Show dialog to configure branch
         dialog = BranchEditorDialog(self, line_num=line_num)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_data()
@@ -294,7 +311,6 @@ class MapEditorPageV2(QWidget):
                 point_type=data['point_type']
             )
             
-            # Add to route if not already there
             if data['name'] and data['name'] != 'H1':
                 if data['name'] not in self.route_panel.route:
                     self.route_panel.route.append(data['name'])
@@ -315,7 +331,6 @@ class MapEditorPageV2(QWidget):
                 
                 self.canvas.update_branch(branch_idx, data)
                 
-                # Update route panel
                 if old_name and old_name in self.route_panel.route and old_name != data['name']:
                     idx = self.route_panel.route.index(old_name)
                     self.route_panel.route[idx] = data['name']
@@ -342,3 +357,21 @@ class MapEditorPageV2(QWidget):
             self.route_panel.route.clear()
             self.route_panel.point_branches.clear()
             self.route_panel.refresh_route_list()
+
+    def on_refresh_robot_status(self):
+        """Refresh robot status manually."""
+        status = self.robot_status_manager.refresh_now()
+        if status == "Online":
+            FloatingMessage.display(self, "Robot: Online", duration=1800)
+        else:
+            self.robot_status_label.setText("Status robota: Offline")
+            FloatingMessage.display(self, "Robot: Offline", duration=1800)
+
+    def on_robot_status_changed(self, status):
+        """Sync status label with global robot status manager."""
+        if status == "Online":
+            self.robot_status_label.setText("Status robota: Online")
+            self.robot_status_label.setStyleSheet("color: #059669; font-weight: bold;")
+        else:
+            self.robot_status_label.setText("Status robota: Offline")
+            self.robot_status_label.setStyleSheet("color: #dc2626; font-weight: bold;")

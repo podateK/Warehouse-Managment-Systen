@@ -5,7 +5,6 @@ from PyQt6.QtGui import QIcon
 from panel.main_window import MainWindow
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -19,7 +18,6 @@ if __name__ == "__main__":
     icon_path = resource_path(os.path.join('icons', 'app_icon.jpg'))
     app.setWindowIcon(QIcon(icon_path))
 
-    # Profesjonalny WMS stylesheet - przemysłowy design
     app.setStyleSheet("""
         /* Kolory palety */
         QWidget {

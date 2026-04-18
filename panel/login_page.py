@@ -14,7 +14,6 @@ class LoginPage(QDialog):
         self.setFixedSize(420, 500)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         
-        # Stylesheet dla dialoga logowania
         self.setStyleSheet("""
             QDialog {
                 background-color: #f5f7fa;
@@ -55,7 +54,6 @@ class LoginPage(QDialog):
         main_layout.setContentsMargins(40, 40, 40, 40)
         main_layout.setSpacing(20)
 
-        # Nagłówek z ikoną
         header_layout = QVBoxLayout()
         header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -75,12 +73,10 @@ class LoginPage(QDialog):
         
         main_layout.addLayout(header_layout)
 
-        # Linia separacyjna
         separator = QLabel()
         separator.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         main_layout.addWidget(separator)
 
-        # Label dla nazwy użytkownika
         username_label = QLabel("Nazwa użytkownika")
         username_label.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
         username_label.setStyleSheet("color: #374151;")
@@ -90,7 +86,6 @@ class LoginPage(QDialog):
         self.username_input.setPlaceholderText("Wpisz swoją nazwę użytkownika")
         main_layout.addWidget(self.username_input)
 
-        # Label dla hasła
         password_label = QLabel("Hasło")
         password_label.setFont(QFont('Segoe UI', 10, QFont.Weight.Bold))
         password_label.setStyleSheet("color: #374151;")
@@ -103,7 +98,6 @@ class LoginPage(QDialog):
 
         main_layout.addSpacing(10)
 
-        # Przycisk logowania
         login_button = QPushButton("Zaloguj się")
         login_button.setMinimumHeight(40)
         login_button.setFont(QFont('Segoe UI', 11, QFont.Weight.Bold))
@@ -112,7 +106,6 @@ class LoginPage(QDialog):
 
         main_layout.addStretch()
 
-        # Stopka
         footer_label = QLabel("© 2026 Warehouse Management System")
         footer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer_label.setStyleSheet("color: #9ca3af; font-size: 9px;")

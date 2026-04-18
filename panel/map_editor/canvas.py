@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget
+﻿from PyQt6.QtWidgets import QWidget
 from PyQt6.QtGui import QPainter, QColor, QFont
 from PyQt6.QtCore import Qt, QRect, QPointF
 import math
@@ -37,7 +37,6 @@ class MapCanvas(QWidget):
                 level = 0
         point['level'] = int(level)
         
-        # Snap X to nearest existing point's X if within snap distance
         snap_distance = 30
         if 'x' in point and len(self.points) > 0:
             existing_xs = [p.get('x', 0) for p in self.points]
@@ -130,7 +129,6 @@ class MapCanvas(QWidget):
         for idx, p in enumerate(self.points):
             lvl = int(p.get('level', 0))
             y = self.top_margin + lvl * self.level_height
-            # Only update Y, preserve X position where user placed it
             self.points[idx]['y'] = int(y)
 
     def paintEvent(self, event):
@@ -148,12 +146,10 @@ class MapCanvas(QWidget):
             x1, y1 = ps.get('x', 0), ps.get('y', 0)
             x2, y2 = pd.get('x', 0), pd.get('y', 0)
 
-            # Rysuj prostą linię między punktami
             painter.drawLine(x1, y1, x2, y2)
             angle = math.atan2(y2 - y1, x2 - x1)
             endx, endy = x2, y2
 
-            # Rysuj strzałkę na końcu
             try:
                 ah = 8
                 p1 = QPointF(endx - ah * math.cos(angle - math.pi / 6), endy - ah * math.sin(angle - math.pi / 6))

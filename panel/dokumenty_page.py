@@ -29,7 +29,6 @@ class DokumentyPage(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # Nagłówek
         header_layout = QHBoxLayout()
         title = QLabel("📄 Dokumenty Magazynowe")
         title.setFont(QFont('Segoe UI', 16, QFont.Weight.Bold))
@@ -38,16 +37,13 @@ class DokumentyPage(QWidget):
         header_layout.addStretch()
         layout.addLayout(header_layout)
         
-        # Separator
         separator = QLabel()
         separator.setStyleSheet("background-color: #d1d5db; min-height: 1px;")
         separator.setFixedHeight(1)
         layout.addWidget(separator)
 
-        # Pasek narzędzi
         toolbar_layout = QHBoxLayout()
         
-        # Przyciski akcji
         button_style = """
             QPushButton {
                 background-color: #0066cc;
@@ -112,10 +108,7 @@ class DokumentyPage(QWidget):
                 background-color: #059669;
             }
         """)
-        # self.demo_pdf_btn.clicked.connect(self.generate_demo_pdfs)
-        # toolbar_layout.addWidget(self.demo_pdf_btn)
         
-        # layout.addLayout(toolbar_layout)
         
         self.table = QTableWidget()
         self.setup_table()
@@ -173,7 +166,6 @@ class DokumentyPage(QWidget):
             msg = f"Wygenerowano {success_count} PDF(y).\n\nLokalizacja: {output_dir}"
             QMessageBox.information(self, "Sukces", msg)
             
-            # Show floating message
             try:
                 FloatingMessage.display(self, f"PDF wygenerowane ({success_count})", duration=3000)
             except Exception:
@@ -186,7 +178,6 @@ class DokumentyPage(QWidget):
         """Otwórz folder z fakturami"""
         invoices_dir = os.path.abspath("invoices")
         
-        # Utwórz folder jeśli nie istnieje
         if not os.path.exists(invoices_dir):
             os.makedirs(invoices_dir)
         
@@ -202,66 +193,7 @@ class DokumentyPage(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "Błąd", f"Nie można otworzyć folderu: {e}")
 
-    # def generate_demo_pdfs(self):
-    #     """Generuj demonstracyjne PDF-y testowe"""
-    #     try:
-    #         from examples.demo_pdf_data import (
-    #             get_demo_document_pz,
-    #             get_demo_document_wz,
-    #             get_demo_document_elektronika
-    #         )
-    #         from functions.pdf_generator import PDFInvoiceGenerator
-            
-    #         generator = PDFInvoiceGenerator(
-    #             company_name="Magazyn Główny Sp. z o.o.",
-    #             output_dir="invoices"
-    #         )
-            
-    #         # Generuj 3 demo PDFs
-    #         pdfs_generated = []
-            
-    #         pdf1 = generator.generate_invoice(
-    #             get_demo_document_pz(),
-    #             filename="DEMO_PZ_PRZYJECIE.pdf"
-    #         )
-    #         pdfs_generated.append("DEMO_PZ_PRZYJECIE.pdf")
-            
-    #         pdf2 = generator.generate_invoice(
-    #             get_demo_document_wz(),
-    #             filename="DEMO_WZ_WYDANIE.pdf"
-    #         )
-    #         pdfs_generated.append("DEMO_WZ_WYDANIE.pdf")
-            
-    #         pdf3 = generator.generate_invoice(
-    #             get_demo_document_elektronika(),
-    #             filename="DEMO_ELEKTRONIKA.pdf"
-    #         )
-    #         pdfs_generated.append("DEMO_ELEKTRONIKA.pdf")
-            
-    #         invoices_dir = os.path.abspath("invoices")
-    #         msg = f"✓ Wygenerowano {len(pdfs_generated)} demo PDFs:\n\n"
-    #         msg += "\n".join([f"  • {pdf}" for pdf in pdfs_generated])
-    #         msg += f"\n\nLokacja: {invoices_dir}\n\nMożesz je teraz otwórz i drukować!"
-            
-    #         QMessageBox.information(self, "Demo PDFs Gotowe!", msg)
-            
-    #         # Otwórz folder automatycznie
-    #         try:
-    #             if platform.system() == 'Windows':
-    #                 os.startfile(invoices_dir)
-    #             elif platform.system() == 'Darwin':
-    #                 subprocess.Popen(['open', invoices_dir])
-    #             else:
-    #                 subprocess.Popen(['xdg-open', invoices_dir])
-    #         except Exception:
-    #             pass
-            
-    #     except ImportError as e:
-    #         QMessageBox.warning(self, "Błąd", f"Nie znaleziono modułu: {e}")
-    #     except Exception as e:
-    #         QMessageBox.warning(self, "Błąd", f"Błąd generowania demo: {e}")
-
-    # def open_add_dialog(self, doc_type):
+    def open_add_dialog(self, doc_type):
         dialog = AddDocumentDialog(self, doc_type)
         if dialog.exec():
             data = dialog.get_data()

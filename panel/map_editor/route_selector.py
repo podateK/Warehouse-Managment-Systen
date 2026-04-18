@@ -7,6 +7,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 
+from functions.RequestSender import RequestSender
+from functions.RobotStatusManager import RobotStatusManager
+
 
 class RouteOrderPanelRight(QWidget):
     """Right panel for selecting route waypoints and sending with line info."""
@@ -14,27 +17,23 @@ class RouteOrderPanelRight(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_editor = parent
+        self.request_sender = RequestSender()
         
         layout = QVBoxLayout(self)
         
-        # Title
         layout.addWidget(QLabel("📍 Plan Trasy"))
         
-        # Start point (H1) always locked
         self.start_label = QLabel("🏠 Start: H1")
         self.start_label.setStyleSheet("font-weight: bold; color: green;")
         layout.addWidget(self.start_label)
         
-        # Separator
         layout.addSpacing(10)
         
-        # Available points to add
         layout.addWidget(QLabel("Dostępne punkty:"))
         self.points_list = QListWidget()
         self.points_list.setMaximumHeight(250)
         layout.addWidget(self.points_list)
         
-        # Buttons for points
         points_btn_layout = QHBoxLayout()
         self.add_point_btn = QPushButton("➕ Dodaj")
         self.add_point_btn.clicked.connect(self.on_add_point)
@@ -46,16 +45,13 @@ class RouteOrderPanelRight(QWidget):
         
         layout.addLayout(points_btn_layout)
         
-        # Separator
         layout.addSpacing(10)
         
-        # Route waypoints
         layout.addWidget(QLabel("Trasa (kolejność):"))
         self.route_list = QListWidget()
         self.route_list.setMaximumHeight(300)
         layout.addWidget(self.route_list)
         
-        # Route buttons
         route_btn_layout = QHBoxLayout()
         self.move_up_btn = QPushButton("⬆ Wyżej")
         self.move_up_btn.clicked.connect(self.on_move_up)
@@ -67,20 +63,16 @@ class RouteOrderPanelRight(QWidget):
         
         layout.addLayout(route_btn_layout)
         
-        # Separator
         layout.addSpacing(10)
         
-        # Line number info
         layout.addWidget(QLabel("Linia skrętu:"))
         self.line_num_label = QLabel("Wybierz punkt trasy")
         layout.addWidget(self.line_num_label)
         
-        # Direction info
         layout.addWidget(QLabel("Kierunek:"))
         self.direction_label = QLabel("---")
         layout.addWidget(self.direction_label)
         
-        # Send button
         layout.addSpacing(15)
         self.send_route_btn = QPushButton("🚀 WYŚLIJ TRASĘ")
         self.send_route_btn.setStyleSheet(
@@ -89,14 +81,62 @@ class RouteOrderPanelRight(QWidget):
         self.send_route_btn.clicked.connect(self.on_send_route)
         layout.addWidget(self.send_route_btn)
         
-        # Stretch at bottom
         layout.addStretch()
         
-        # Internal data
         self.route = []  # List of point names in order
         self.point_branches = {}  # point_name -> {line_num, direction}
         
         self.refresh_points_list()
+
+    def _sorted_branches(self):
+        """Return branches sorted by line number, then original insertion order."""
+        if not self.parent_editor or not hasattr(self.parent_editor, 'canvas'):
+            return []
+        branches = list(getattr(self.parent_editor.canvas, 'branches', []))
+        indexed = list(enumerate(branches))
+        indexed.sort(key=lambda x: (int(x[1].get('line_num', 0)), x[0]))
+        return indexed
+
+    def _build_auto_payload_for_branch(self, branch_idx):
+        """Build a single AUTO payload for route prefix up to selected point."""
+        ordered = self._sorted_branches()
+        if not ordered:
+            return {"command": "AUTO", "way": [], "turn": []}
+
+        prefix = []
+        for idx, branch in ordered:
+            prefix.append((idx, branch))
+            if idx == branch_idx:
+                break
+
+        side_counts = {"LEFT": 0, "RIGHT": 0}
+        way = []
+        turn = []
+
+        for _, branch in prefix:
+            direction = str(branch.get('direction', 'LEFT')).upper()
+            if direction not in side_counts:
+                continue
+
+            side_counts[direction] += 1
+            side = 'left' if direction == 'LEFT' else 'right'
+            way.extend([side, str(side_counts[direction])])
+            turn.append(side)
+
+        return {
+            "command": "AUTO",
+            "way": way,
+            "turn": turn,
+        }
+
+    def send_auto_for_branch(self, branch_idx):
+        """Send a single AUTO request payload for selected branch."""
+        payload = self._build_auto_payload_for_branch(branch_idx)
+        print(f"📡 AUTO payload: {payload}")
+        success, message = self.request_sender.send_json(payload)
+        print(f"📨 AUTO result: success={success} | {message}")
+        if success:
+            RobotStatusManager().set_automatic_mode_local()
     
     def refresh_points_list(self):
         """Refresh available points list from mapa."""
@@ -164,17 +204,14 @@ class RouteOrderPanelRight(QWidget):
         """Update route list display."""
         self.route_list.clear()
         
-        # Always show H1 at top
         h1_item = QListWidgetItem("🏠 H1 (START)")
         h1_item.setData(Qt.ItemDataRole.UserRole, 'H1')
         h1_item.setBackground(QColor(144, 238, 144))  # Light green
         self.route_list.addItem(h1_item)
         
-        # Add route points
         for i, point_name in enumerate(self.route):
             item_text = f"{i+1}. {point_name}"
             
-            # Get line and direction if available
             if point_name in self.point_branches:
                 branch_info = self.point_branches[point_name]
                 line_num = branch_info.get('line_num', '?')
@@ -201,11 +238,10 @@ class RouteOrderPanelRight(QWidget):
         
         try:
             from tools.route_logger import Way
-            from functions.RequestSender import RequestSender
             
             print(f"\n🚀 Wysyłam trasę: H1 → {' → '.join(self.route)}\n")
             
-            RS = RequestSender("http://localhost:3000/cmd")
+            RS = self.request_sender
             
             import time
             current = 'H1'
@@ -220,7 +256,6 @@ class RouteOrderPanelRight(QWidget):
                 else:
                     print()
                 
-                # Send with line number if available
                 Way(current, point_name, line_num=line_num, request_sender=RS, leg_delay=0.2)
                 current = point_name
                 time.sleep(0.5)
